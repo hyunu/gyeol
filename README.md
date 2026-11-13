@@ -18,16 +18,17 @@
 | 비동기 분석 작업 큐 | 완료 (ADR-0007, 재시도·타임아웃·임차 회수) |
 | 웹 대시보드 (React) | 완료 — 타임라인·상세·인물 필터·키워드 검색 (`apps/web`) |
 | Fake Hardware / Fake Mobile | 완료 |
-| 통합·계약 테스트 | 완료 — 26 tests |
+| 통합·계약 테스트 | 완료 — 27 tests |
 | PostgreSQL 마이그레이션·제약 검증 | 완료 (15 테이블, `npm run db:checks`) |
 | PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
+| 오브젝트 스토리지 | 완료 — 로컬 디스크 + S3/MinIO (`GYEOL_STORAGE`), `test:s3` 7 tests |
 | 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
 
 ## 빠른 시작
 
 ```bash
 npm install
-npm run check      # 계약 + 타입 + 테스트 (26 tests)
+npm run check      # 계약 + 타입 + 테스트 (27 tests)
 npm start          # http://127.0.0.1:8080 (메모리 저장소)
 ```
 
@@ -41,6 +42,17 @@ GYEOL_STORE=postgres npm start
 
 npm run db:checks  # 제약·인덱스 실동작 검증
 npm run test:db    # Store·작업 큐 테스트 (14 tests)
+```
+
+S3(MinIO) 오브젝트 스토리지:
+
+```bash
+make db-up   # compose 가 MinIO(9000/9001)도 함께 띄운다
+export GYEOL_STORAGE=s3 \
+  S3_ENDPOINT=http://127.0.0.1:9000 \
+  S3_ACCESS_KEY_ID=gyeol S3_SECRET_ACCESS_KEY=gyeol-minio
+npm start
+npm run test:s3    # S3 어댑터·전 구간 (7 tests)
 ```
 
 웹 대시보드:
@@ -116,13 +128,14 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 - 분석은 **비동기 작업 큐**다(ADR-0007). `POST .../analyze` 는 202 로 작업을 만들고,
   `GET /api/v1/analysis-jobs/{jobId}` 로 폴링한다. 워커는 API 프로세스 안에서 돈다.
 - `X-User-Id` 는 **로컬 전용**이며 `GYEOL_ENV != local` 이면 401(ADR-0003).
-- 오브젝트 스토리지는 **로컬 디스크**다. 운영용 S3/MinIO 어댑터는 W-14.
+- 오브젝트 스토리지는 **로컬 디스크**가 기본이고 `GYEOL_STORAGE=s3` 로 S3/MinIO 를 쓴다.
+  S3 경유 업로드는 커밋 시 전송량이 2배다(ADR-0008).
 
 ## 다음 단계
 
 작업 순서와 완료 조건은 [`docs/08-work-order.md`](docs/08-work-order.md) 를 따른다.
 
 1. 스키마 결정 — D-05(임베딩 차원), D-04(코덱), D-01(인증), D-08(보존) (W-10~W-13)
-2. 오브젝트 스토리지 S3/MinIO 어댑터 (W-14) · 검색 UI E2E (W-17)
+2. 검색 UI E2E 자동화 (W-17) · 백업/복구 리허설 (W-26)
 3. 실제 AI provider 어댑터 (W-18)
 4. 실물 웨어러블 + iOS BLE 연동 (W-20~W-24, `HW-PENDING`)

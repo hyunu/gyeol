@@ -40,7 +40,7 @@ flowchart LR
 | L0 계약 | JSON Schema, OpenAPI, 오류 코드 | 없음 | **구현됨** (`contracts/`) |
 | L1 도메인 코어 | 엔티티, 값 객체, 불변식, 도메인 서비스 | L0 | **구현됨** (`apps/api/src/domain/`) |
 | L2 응용 | 유스케이스 오케스트레이션, 트랜잭션 경계 | L1, 포트 인터페이스 | **구현됨** (`apps/api/src/usecases/`) |
-| L3 어댑터 | 저장소, 미디어, 하드웨어, 외부 연동 구현 | L1·L2 포트 | **구현됨** — 메모리·PostgreSQL 저장소, 로컬 디스크, Fake AI (`apps/api/src/adapters/`) |
+| L3 어댑터 | 저장소, 미디어, 하드웨어, 외부 연동 구현 | L1·L2 포트 | **구현됨** — 메모리·PostgreSQL 저장소, 로컬 디스크·S3 스토리지, Fake AI (`apps/api/src/adapters/`) |
 | L4 엣지 | HTTP 라우팅, 인증, 요청/응답 매핑, CLI | L2 | **구현됨** (`apps/api/src/http/`) |
 | L5 클라이언트 | 웹/앱/장치 UI | L0(계약) | **미착수** — Fake Device/Mobile 은 테스트 하네스(`packages/`) |
 

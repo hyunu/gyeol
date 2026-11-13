@@ -1,4 +1,4 @@
-.PHONY: help install check validate typecheck test test-db contract-test db-up db-down db-migrate db-checks clean
+.PHONY: help install check validate typecheck test test-db test-s3 contract-test db-up db-down db-migrate db-checks clean
 
 help: ## 사용 가능한 명령
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "};{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -26,10 +26,10 @@ contract-test: ## 실행 중인 서버를 OpenAPI 와 대조 (BASE_URL)
 start: ## API 실행
 	npm start
 
-db-up: ## 로컬 PostgreSQL(pgvector) 기동
+db-up: ## 로컬 PostgreSQL(pgvector)·MinIO 기동
 	docker compose -f deploy/docker-compose.yml up -d
 
-db-down: ## 로컬 PostgreSQL 중지
+db-down: ## 로컬 PostgreSQL·MinIO 중지
 	docker compose -f deploy/docker-compose.yml down
 
 db-migrate: ## 마이그레이션 적용 (DATABASE_URL 필요)
@@ -37,6 +37,13 @@ db-migrate: ## 마이그레이션 적용 (DATABASE_URL 필요)
 
 db-checks: ## DB 제약·인덱스 실동작 검증 (DATABASE_URL 필요)
 	npm run --silent db:checks
+
+test-s3: ## S3(MinIO) 스토리지 테스트
+	S3_ENDPOINT=$${S3_ENDPOINT:-http://127.0.0.1:9000} \
+	S3_ACCESS_KEY_ID=$${S3_ACCESS_KEY_ID:-gyeol} \
+	S3_SECRET_ACCESS_KEY=$${S3_SECRET_ACCESS_KEY:-gyeol-minio} \
+	S3_BUCKET=$${S3_BUCKET:-gyeol-test} \
+	npm run --silent test:s3
 
 clean: ## 로컬 산출물 정리
 	rm -rf node_modules .artifacts

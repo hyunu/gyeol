@@ -4,6 +4,7 @@ import path from "node:path";
 import { MemoryStore } from "../adapters/memory/store.ts";
 import { PostgresStore } from "../adapters/postgres/store.ts";
 import { LocalDiskStorage } from "../adapters/storage/local-disk.ts";
+import { S3Storage } from "../adapters/storage/s3.ts";
 import { FakeAiPipeline } from "../adapters/ai/fake-pipeline.ts";
 import { defaultDeps, pagination, type Deps } from "../usecases/deps.ts";
 import * as deviceUseCases from "../usecases/devices.ts";
@@ -12,7 +13,7 @@ import * as conversationUseCases from "../usecases/conversations.ts";
 import * as analysisUseCases from "../usecases/analysis.ts";
 import { methodNotAllowed, notFound, validationFailed } from "../domain/errors.ts";
 import type { ActionItemStatus } from "../domain/types.ts";
-import type { Store } from "../ports/store.ts";
+import type { ObjectStorage, Store } from "../ports/store.ts";
 import { DEMO_USER_ID, resolveUserId } from "./auth.ts";
 import { sendEmpty, sendJson, sendProblem, readBinaryBody, readJsonBody } from "./respond.ts";
 import * as dto from "./dto.ts";
@@ -71,6 +72,16 @@ export function createStoreFromEnv(kind = process.env.GYEOL_STORE ?? "memory"): 
   throw new Error(`GYEOL_STORE 값이 올바르지 않습니다: ${kind} (memory|postgres)`);
 }
 
+/**
+ * `GYEOL_STORAGE` 로 오브젝트 스토리지를 고른다.
+ * 잘못된 값은 조용히 로컬 디스크로 떨어지지 않고 즉시 실패한다(fail-closed).
+ */
+export function createStorageFromEnv(storageDir: string, kind = process.env.GYEOL_STORAGE ?? "local"): ObjectStorage {
+  if (kind === "local") return new LocalDiskStorage(storageDir);
+  if (kind === "s3") return new S3Storage();
+  throw new Error(`GYEOL_STORAGE 값이 올바르지 않습니다: ${kind} (local|s3)`);
+}
+
 function split(p: string): string[] {
   return p.split("/").filter(Boolean);
 }
@@ -83,7 +94,7 @@ export function createApp(options: AppOptions = {}): http.Server {
     options.deps ??
     defaultDeps({
       store: createStoreFromEnv(),
-      storage: new LocalDiskStorage(storageDir),
+      storage: createStorageFromEnv(storageDir),
       ai: new FakeAiPipeline(),
     });
   const version = options.version ?? CONTRACT_VERSION;

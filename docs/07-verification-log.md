@@ -1,8 +1,8 @@
 # 검증 기록 (Phase 1)
 
 - 최종 실행: 2026-11-14
-- 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db` · `web:build`
-- 결과: **26 tests / pass 26 / fail 0**, DB **14 tests / pass 14 / fail 0**,
+- 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db` · `test:s3` · `web:build`
+- 결과: **27 tests / pass 27 / fail 0**, DB **14 tests / pass 14 / fail 0**, S3 **7 tests / pass 7 / fail 0**,
   계약 스키마 11 · 예제 17 · OpenAPI 유효, DB 마이그레이션(2건)·제약 검사 통과
 
 ## 1. 자동 검증 항목
@@ -31,6 +31,7 @@
 | 20 | 분석 타임아웃 → `failed`, 녹음 `analysis_failed` | 동일 | 통과 |
 | 21 | 만료 임차 회수(attempt 증가), 타 사용자 작업 404 | 동일 | 통과 |
 | 22 | API 백그라운드 워커가 등록 작업을 처리(HTTP 폴링) | 동일 | 통과 |
+| 23 | 스토리지 선택 fail-closed (`GYEOL_STORAGE`) | `tests/storage.test.ts` | 통과 |
 
 ## 2. 통합 테스트가 실제로 확인한 것
 
@@ -88,6 +89,32 @@
 > 브라우저 E2E 자동화는 아직 없다. W-17 에서 날짜·인물·키워드 검색 시나리오로 추가한다.
 > 그때까지 R-024 는 `WIP` 로 둔다.
 
+## 2.3 S3 오브젝트 스토리지 (W-14, 2026-11-14)
+
+MinIO(`minio/minio:latest`, `127.0.0.1:9000`)에 대해 `S3Storage` 를 검증했다 (`tests/s3`, 7건).
+
+| # | 검증 | 결과 |
+| --- | --- | --- |
+| 1 | 청크 순서 저장 → commit 크기·SHA-256 → read 일치 | 통과 |
+| 2 | 오프셋 불일치 청크 거부(재개 규칙) | 통과 |
+| 3 | abort 후 임시 청크 제거, commit 실패 | 통과 |
+| 4 | 세션 재시작 시 이전 청크 폐기 | 통과 |
+| 5 | 8 MiB 초과 업로드 multipart 이어붙임 | 통과 |
+| 6 | 없는 객체 `exists=false` / `read` 실패 | 통과 |
+| 7 | S3 로 전 구간: 업로드 재개→검증→ACK→분석 | 통과 |
+
+```bash
+make db-up
+S3_ENDPOINT=http://127.0.0.1:9000 \
+S3_ACCESS_KEY_ID=gyeol S3_SECRET_ACCESS_KEY=gyeol-minio \
+npm run test:s3
+```
+
+- 버킷은 어댑터가 없으면 만든다(`S3_BUCKET`, 기본 `gyeol-test`).
+- 커밋이 임시 객체를 읽어 다시 쓰므로 전송량이 2배다. 운영 규모의 대안은
+  `docs/adr/0008-object-storage-s3.md` 에 기록했다.
+- 서버는 `GYEOL_STORAGE=local|s3` 로 선택하며, 잘못된 값은 fail-closed 다.
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |
@@ -99,6 +126,7 @@
 | ENV-05 | 실제 STT/화자분리/요약 provider | D-05 등 미확정 | provider 어댑터 계약 테스트 |
 | ENV-06 | 한국어 전문검색 토크나이저(D-07) | 미확정 | 검색 품질 측정 |
 | ENV-07 | pgvector 인덱스(HNSW) 튜닝 | 차원 미확정(D-05) | 부하 테스트 |
+| ENV-08 | 실제 S3/AWS(운영) | MinIO 로만 검증 | 운영 버킷·권한·수명주기 리허설 (W-26) |
 
 ## 3.1 DB 검증 결과 (2026-11-14)
 

@@ -49,6 +49,34 @@ jobs:
       - name: PostgreSQL 통합 테스트
         run: npm run test:db
 
+  storage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: MinIO 기동
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=gyeol -e MINIO_ROOT_PASSWORD=gyeol-minio \
+            minio/minio server /data
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:9000/minio/health/live && break
+            sleep 2
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: S3 스토리지 테스트
+        env:
+          S3_ENDPOINT: http://127.0.0.1:9000
+          S3_REGION: us-east-1
+          S3_BUCKET: gyeol-ci
+          S3_ACCESS_KEY_ID: gyeol
+          S3_SECRET_ACCESS_KEY: gyeol-minio
+          S3_FORCE_PATH_STYLE: "true"
+        run: npm run test:s3
+
   web:
     runs-on: ubuntu-latest
     defaults:
