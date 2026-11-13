@@ -23,6 +23,7 @@
 | PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
 | 오브젝트 스토리지 | 완료 — 로컬 디스크 + S3/MinIO (`GYEOL_STORAGE`), `test:s3` 7 tests |
 | 관측성 | 완료 — 요청 JSON 로그, `X-Trace-Id`, `GET /metrics` (`docs/09-observability.md`) |
+| 백업/복구 | 완료 — `db:backup`·복구 리허설 통과 (`docs/11-backup-restore.md`) |
 | 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
 
 ## 빠른 시작

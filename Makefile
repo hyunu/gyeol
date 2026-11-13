@@ -1,4 +1,4 @@
-.PHONY: help install check validate typecheck test test-db test-s3 contract-test db-up db-down db-migrate db-checks clean
+.PHONY: help install check validate typecheck test test-db test-s3 contract-test db-up db-down db-migrate db-checks db-backup db-restore-rehearsal clean
 
 help: ## 사용 가능한 명령
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "};{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -37,6 +37,13 @@ db-migrate: ## 마이그레이션 적용 (DATABASE_URL 필요)
 
 db-checks: ## DB 제약·인덱스 실동작 검증 (DATABASE_URL 필요)
 	npm run --silent db:checks
+
+db-backup: ## 논리 백업 (BACKUP=경로, 기본 .artifacts/backups)
+	npm run --silent db:backup -- $${BACKUP:-}
+
+db-restore-rehearsal: ## 백업 복구 리허설 (BACKUP=경로 필요)
+	@test -n "$$BACKUP" || (echo "BACKUP=경로 가 필요합니다."; exit 1)
+	npm run --silent db:restore:rehearsal -- "$$BACKUP"
 
 test-s3: ## S3(MinIO) 스토리지 테스트
 	S3_ENDPOINT=$${S3_ENDPOINT:-http://127.0.0.1:9000} \

@@ -44,6 +44,8 @@ gyeol/
 ├── scripts/db-migrate.mjs          # 체크섬 기반 마이그레이션 러너
 ├── scripts/db-checks.mjs           # DB 제약 검증 러너
 ├── scripts/test-s3.mjs             # MinIO 스토리지 테스트 러너
+├── scripts/db-backup.mjs           # pg_dump 논리 백업
+├── scripts/db-restore-rehearsal.mjs # 별도 DB 복구·비교
 ├── tests/
 │   ├── integration.test.ts         # 전 구간 시나리오
 │   ├── async-analysis.test.ts      # 작업 큐·재시도·타임아웃·임차 회수
@@ -54,7 +56,7 @@ gyeol/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~10, adr/0001~0008)
+├── docs/ (00~11, adr/0001~0008)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```
 

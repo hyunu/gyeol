@@ -128,6 +128,19 @@ npm run test:s3
 
 문서: `docs/09-observability.md` (로그 스키마·메트릭·알림 최소 세트·조회 SQL).
 
+## 2.5 백업/복구 리허설 (W-26, 2026-11-14)
+
+| 단계 | 근거 | 결과 |
+| --- | --- | --- |
+| 논리 백업 | `npm run db:backup` (`pg_dump -Fc`) | 통과 (0.06 MiB) |
+| 별도 DB 복구 | `npm run db:restore:rehearsal` (원본 무변경) | 통과 |
+| 테이블·행 수 | 16/16 테이블, 전부 일치 | 통과 |
+| 마이그레이션 체크섬 | `schema_migrations` 2건 일치 | 통과 |
+| 확장 | `citext`·`vector` 일치 | 통과 |
+| 소요 | 3.4s | 기록 |
+
+문서: `docs/11-backup-restore.md` (운영 절차·한계·오브젝트 스토리지 별도 백업).
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |
