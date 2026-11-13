@@ -29,7 +29,10 @@ npm run contract-test   # 실행 중인 서버를 OpenAPI 와 대조
 | 공통 계약 | 완료 — `contracts/` (스키마 3 · OpenAPI) |
 | 계약 검증 파이프라인 | 완료 — CI + `npm run check` |
 | 워킹 스켈레톤 API | 완료 — `apps/api/` (`/healthz`, `/api/v1/info`) + 계약 테스트 |
-| 도메인 모델 | 미착수 — 스펙 필요 |
+| Phase 1 스펙 | 확정 — `MEMORIAL_PROJECT_SPEC.md` v1.0 |
+| Phase 1 요구사항 | 완료 — `docs/06-phase1-requirements.md` |
+| 도메인 모델·ERD | **검토 대기** — `docs/10-domain-model.md` |
+| 마이그레이션·도메인 코드 | 승인 후 착수 |
 | 하드웨어 | 미착수 — `HW-PENDING` |
 
 ## 구조
@@ -50,8 +53,9 @@ tools/       계약 검증기와 테스트
 
 ## 다음 할 일
 
-- [ ] `MEMORIAL_PROJECT_SPEC.md` 원본 확정 (OPEN-001)
-- [ ] 기술 스택 결정 (OPEN-002)
-- [ ] 하드웨어/인터페이스 결정 (OPEN-003)
-- [ ] MVP 범위·수용 기준 결정 (OPEN-004)
-- [ ] 이후 Phase 2(도메인 계약) 착수
+- [ ] `docs/10-domain-model.md` §11 승인 (D-03, 1:1, `stored` 시점, `speaker_clusters`, TBD 기본값)
+- [ ] PostgreSQL 마이그레이션 `0001_init.sql`
+- [ ] OpenAPI 확장 (Recording / Conversation)
+- [ ] 도메인 코어 + 유스케이스
+- [ ] Fake Hardware / Fake Mobile + 통합 테스트
+- [ ] 실제 하드웨어·iPhone 연결 (`HW-PENDING`)

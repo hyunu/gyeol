@@ -110,6 +110,23 @@ sequenceDiagram
 | 오류/problem+json 규약 | 확정 | `contracts/schemas/common/problem.json` |
 | 페이지 봉투 | 확정 | `page.json` |
 | 하드웨어 포트 존재 | 확정 | 상세 capability 는 미확정 |
-| 언어/런타임/DB/배포 | **미확정** | OPEN-002 |
-| 인증/권한 모델 | **미확정** | OPEN-004 |
-| 도메인 엔티티 | **미확정** | OPEN-001 |
+| 언어/런타임/DB/배포 | **확정** (Node/TS, PostgreSQL+pgvector, Object Storage) | 스펙 v1.0 §3 |
+| 인증/권한 모델 | **미확정** | D-01 / OPEN-004 |
+| 도메인 엔티티 | **설계 완료, 승인 대기** | `docs/10-domain-model.md` |
+
+## 8. 원본·파생 계층 분리 (Phase 1 확정)
+
+```text
+원본 계층   recordings + 오브젝트 스토리지(음성)   ← 불변, 무결성 검증 대상
+              │ 1:1
+파생 계층   conversations → segments / clusters / entities / actions / embeddings
+```
+
+| 규칙 | 내용 |
+| --- | --- |
+| R1 | 파생 계층은 언제든 삭제·재생성 가능해야 한다(`analysis_version`). |
+| R2 | 원본은 `stored`(크기·SHA-256 검증 완료) 이전에 삭제 허가하지 않는다. |
+| R3 | 원본 purge 후에도 파생 데이터는 유지할 수 있다(정책 D-11). |
+| R4 | 파생 데이터는 `pipeline` 메타데이터로 재현 가능성을 기록한다. |
+
+상세 엔티티·상태 전이·삭제 전파는 `docs/10-domain-model.md` 를 따른다.

@@ -21,6 +21,8 @@ gyeol/
 │   ├── 03-folder-structure.md
 │   ├── 04-development-plan.md
 │   ├── 05-api-conventions.md
+│   ├── 06-phase1-requirements.md
+│   ├── 10-domain-model.md       # Phase 1 ERD/필드/상태전이 (승인 대기)
 │   └── adr/
 │       └── 0001-contract-first.md
 ├── apps/
@@ -39,29 +41,32 @@ gyeol/
         └── api.test.mjs
 ```
 
-## 2. 목표 구조 (스택 확정 후 채움)
+## 2. 목표 구조 (스택 확정 — Phase 1)
 
 ```text
 gyeol/
 ├── contracts/              # L0. 언어 중립 계약 (현재 구현됨)
+├── db/
+│   └── migrations/         # 0001_init.sql 등 (Phase 2)
 ├── packages/
 │   ├── domain/             # L1. 순수 도메인 (외부 의존 0)
 │   ├── application/        # L2. 유스케이스 + 포트 정의
-│   └── adapters/
-│       ├── persistence/    # L3
-│       ├── media/
-│       ├── device-fake/    # 테스트용
-│       ├── device-sim/     # 개발용 시뮬레이터
-│       └── device-real/    # 실물 (HW-PENDING)
+│   ├── adapters/
+│   │   ├── persistence/    # L3. PostgreSQL
+│   │   ├── storage/        # L3. 오브젝트 스토리지(로컬 구현 포함)
+│   │   ├── ai/             # L3. AI Provider (fake 포함)
+│   │   └── device-fake/    # L3. Fake Hardware Adapter
+│   ├── device-fake/        # 웨어러블 시뮬레이터
+│   └── mobile-fake/        # BLE 수신·재개·업로드 시뮬레이터
 ├── apps/
 │   ├── api/                # L4. HTTP 엣지
-│   └── admin/              # 운영 도구 (필요 시)
-├── tools/                  # 계약 검증/코드 생성/린트
+│   └── simulator/          # Fake 기기→폰→서버 E2E 실행기
+├── tools/                  # 계약 검증/계약 테스트
 └── docs/
 ```
 
-> 위 트리는 **제안**이다. 모노레포 여부, 패키지 네이밍, 언어는 OPEN-002 결정에 따른다.
-> 지금 디렉터리를 미리 만들지 않는다(빈 껍데기는 탐색 비용만 늘린다).
+> 스택은 `MEMORIAL_PROJECT_SPEC.md` §3 으로 확정되었다(Node/TS, PostgreSQL+pgvector, iOS, React).
+> 디렉터리는 해당 단계에서 생성한다(빈 껍데기를 미리 만들지 않는다).
 
 ## 3. 명명 규칙
 

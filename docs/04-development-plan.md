@@ -38,27 +38,28 @@ flowchart LR
 | 상태 | **완료** — 근거: `tools/test/api.test.mjs` 실행 로그 |
 | 비고 | 프레임워크 미사용. 스택 확정 시 L4 만 교체하면 된다. 도메인 로직 없음. |
 
-## Phase 1 — 스펙 확정 (대기)
+## Phase 1 — 스펙 확정 및 도메인 설계 (검토 대기)
 
 | 항목 | 내용 |
 | --- | --- |
-| 목표 | `MEMORIAL_PROJECT_SPEC.md` 확정 및 OPEN-001~006 해소 |
-| 선행 | 사용자 입력 |
-| 산출물 | 확정된 기준 문서, 갱신된 요구사항 추적표, ADR(스택/인증/데이터 보존) |
-| 완료 조건 | OPEN-001~004 가 모두 결정되고 문서에 반영됨 |
-| 상태 | **BLOCKED** |
-| 리스크 | 미해소 시 이후 모든 단계가 추정 설계가 됨 (RISK-001) |
+| 목표 | `MEMORIAL_PROJECT_SPEC.md` 확정 및 OPEN-001~004 해소 |
+| 산출물 | 기준 문서 v1.0(확정), `docs/06-phase1-requirements.md`, `docs/10-domain-model.md`(ERD·필드·상태전이·생명주기) |
+| 완료 조건 | 설계 §11 의 5개 결정 승인 |
+| 상태 | **설계 완료 / 승인 대기** (D-03, 1:1, `stored` 시점, `speaker_clusters`, TBD 기본값) |
+| 비고 | 승인 전 마이그레이션·코드를 생성하지 않는다 |
+
+| Phase 2 — 도메인 계약 | `docs/10-domain-model.md` 설계 완료, 승인 대기 |
 
 ## Phase 2 — 도메인 계약·데이터 모델
 
 | 항목 | 내용 |
 | --- | --- |
 | 목표 | 핵심 엔티티/값 객체/불변식을 스키마와 문서로 확정 |
-| 선행 | Phase 1 |
-| 산출물 | `contracts/schemas/domain/*.json`, ERD, 마이그레이션 정책, 오류 코드 확장 |
-| 테스트 | 스키마 valid/invalid 예제, 제약(필수/길이/열거) 커버리지 |
-| 완료 조건 | 모든 엔티티에 스키마+예제+문서, `npm run check` 통과 |
-| 상태 | TODO |
+| 선행 | Phase 1 승인 |
+| 산출물 | `contracts/schemas/domain/*.json`, ERD(`docs/10-domain-model.md`), `db/migrations/0001_init.sql` |
+| 테스트 | 스키마 valid/invalid 예제, 제약(필수/길이/열거) 커버리지, 빈 DB 마이그레이션 적용 |
+| 완료 조건 | 모든 엔티티에 스키마+예제+문서, `npm run check` 통과, 마이그레이션 재현 |
+| 상태 | 설계 검토 중 |
 
 ## Phase 3 — 도메인 코어 + 영속 어댑터
 
