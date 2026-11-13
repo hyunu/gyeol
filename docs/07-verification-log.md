@@ -1,8 +1,9 @@
 # 검증 기록 (Phase 1)
 
-- 최종 실행: 2026-11-13
-- 명령: `npm run check`
-- 결과: **17 tests / pass 17 / fail 0**, 계약 스키마 10 · 예제 15 · OpenAPI 유효
+- 최종 실행: 2026-11-14
+- 명령: `npm run check` · `db:migrate` · `db:checks`
+- 결과: **17 tests / pass 17 / fail 0**, 계약 스키마 10 · 예제 15 · OpenAPI 유효,
+  DB 마이그레이션 적용 및 제약 검사 통과
 
 ## 1. 자동 검증 항목
 
@@ -40,13 +41,31 @@
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |
 | --- | --- | --- | --- |
-| ENV-01 | `0001_init.sql` 실제 적용 | 개발 환경에 Docker/PostgreSQL 없음 | `make db-up && make db-migrate` |
-| ENV-02 | PostgreSQL `Store` 어댑터 | ENV-01 선행 필요 | `npm run test:db` |
+| ENV-01 | `0001_init.sql` 실제 적용 | — | **해소 (2026-11-14)** — 14 테이블·확장 2종 적용 확인 |
+| ENV-02 | PostgreSQL `Store` 어댑터 | W-07 미구현 | `npm run test:db` (W-08) |
 | ENV-03 | 실물 웨어러블(VAD·PDM·microSD·BLE) | 하드웨어 미확보 | 펌웨어 테스트 + `HW-PENDING` 절차 |
 | ENV-04 | iOS CoreBluetooth/AVFoundation 실연동 | 기기·앱 미개발 | 실기기 시나리오 |
 | ENV-05 | 실제 STT/화자분리/요약 provider | D-05 등 미확정 | provider 어댑터 계약 테스트 |
 | ENV-06 | 한국어 전문검색 토크나이저(D-07) | 미확정 | 검색 품질 측정 |
 | ENV-07 | pgvector 인덱스(HNSW) 튜닝 | 차원 미확정(D-05) | 부하 테스트 |
+
+## 3.1 DB 검증 결과 (2026-11-14)
+
+Docker(pgvector/pgvector:pg17) 기동 후 빈 DB 에 `0001_init.sql` 을 적용했다.
+
+| 항목 | 결과 |
+| --- | --- |
+| 마이그레이션 | `✔ 0001_init.sql` (1건, `schema_migrations` 체크섬 기록) |
+| 테이블 | 14 + `schema_migrations` |
+| 확장 | `citext` 1.6, `vector` 0.8.7 |
+| 인덱스 / CHECK / FK | 42 / 44 / 20 |
+| 제약 실동작 | `npm run db:checks` 통과 (CHECK·FK·UNIQUE·부분 인덱스·vector 차원) |
+
+```bash
+make db-up
+DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run db:migrate
+DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run db:checks
+```
 
 ## 4. 테스트 실행 방법
 
@@ -54,6 +73,13 @@
 npm run check            # 계약 + 타입 + 단위/통합
 npm start                # API (메모리 저장소)
 npm run contract-test    # 실행 중 서버를 OpenAPI 와 대조
+
+# DB (Docker 필요)
+make db-up
+DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run db:migrate
+DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run db:checks
+DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run test:db   # W-08 이후 의미
 ```
 
-> `npm run test:db` 는 PostgreSQL 이 준비된 뒤에만 의미가 있다(현재 미구현 어댑터).
+> `npm run test:db` 는 `tests/db/` 가 비어 있으면 **실패**한다(0 tests 거짓 통과 방지).
+> 현재는 PostgreSQL `Store` 어댑터(W-07)가 없어 의도적으로 실패한다.

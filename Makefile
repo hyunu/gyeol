@@ -1,4 +1,4 @@
-.PHONY: help install check validate typecheck test test-db contract-test db-up db-down db-migrate clean
+.PHONY: help install check validate typecheck test test-db contract-test db-up db-down db-migrate db-checks clean
 
 help: ## 사용 가능한 명령
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "};{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -34,6 +34,9 @@ db-down: ## 로컬 PostgreSQL 중지
 
 db-migrate: ## 마이그레이션 적용 (DATABASE_URL 필요)
 	npm run db:migrate
+
+db-checks: ## DB 제약·인덱스 실동작 검증 (DATABASE_URL 필요)
+	npm run --silent db:checks
 
 clean: ## 로컬 산출물 정리
 	rm -rf node_modules .artifacts

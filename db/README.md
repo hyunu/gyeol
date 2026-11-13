@@ -36,7 +36,24 @@ npm run db:migrate
 | 항목 | 상태 |
 | --- | --- |
 | SQL 작성 | 완료 |
-| 실제 PostgreSQL 적용 | **ENV-PENDING** — 개발 환경에 Docker/PostgreSQL 이 없어 미실행 |
-| 제약·인덱스 동작 | **ENV-PENDING** (적용 후 `db/checks/` 로 검증 예정) |
+| 실제 PostgreSQL 적용 | **검증 완료** (2026-11-14, PostgreSQL 17 + pgvector 0.8.7) |
+| 제약·인덱스 실동작 | **검증 완료** — `db/checks/*.sql`, `npm run db:checks` |
+
+### 적용 결과 (2026-11-14)
+
+```
+확장      citext 1.6, vector 0.8.7
+테이블    14 + schema_migrations
+인덱스    42 (부분 유니크: upload_sessions_open_uk)
+CHECK     44
+FK        20
+```
+
+### 제약 검증 (`db/checks/`)
+
+- 각 SQL 파일은 스스로 "위반이 거부되는지"를 검사한다. 기대한 SQLSTATE 가 아니면 실패다.
+- 러너(`scripts/db-checks.mjs`)는 파일 단위 트랜잭션으로 실행하고 **항상 ROLLBACK** 한다.
+- 검사기가 실패를 감지하는지도 음성 대조(negative control)로 확인했다.
+- 새 제약을 추가하는 마이그레이션은 여기에 검사를 함께 추가한다.
 
 > DB 적용 검증 전까지 이 스키마를 "검증 완료"로 표기하지 않는다.

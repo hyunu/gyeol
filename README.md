@@ -17,8 +17,8 @@
 | Recording / Conversation API | 완료 (메모리 저장소) |
 | Fake Hardware / Fake Mobile | 완료 |
 | 통합·계약 테스트 | 완료 — 17 tests |
-| PostgreSQL 마이그레이션 작성 | 완료 |
-| PostgreSQL 실행 검증·어댑터 | **ENV-PENDING** — 검증 절차는 `docs/08-work-order.md` W-05~W-08 |
+| PostgreSQL 마이그레이션·제약 검증 | 완료 (14 테이블, `npm run db:checks`) |
+| PostgreSQL `Store` 어댑터 | **TODO** — W-07~W-09 |
 | 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
 
 ## 빠른 시작

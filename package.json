@@ -12,6 +12,7 @@
     "validate": "node tools/validate-contracts.mjs",
     "contract-test": "node tools/contract-test.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
+    "db:checks": "node scripts/db-checks.mjs",
     "check": "npm run validate && npm run typecheck && npm test"
   },
   "dependencies": {

@@ -56,15 +56,15 @@ flowchart LR
 | 완료 조건 | 스키마/예제 커버리지 + OpenAPI 유효 + 타입 검사 통과 |
 | 상태 | **완료** (DB 실행 검증은 ENV-01) |
 
-## Phase 2b — PostgreSQL 어댑터 (대기)
+## Phase 2b — PostgreSQL 어댑터 (진행 중)
 
 | 항목 | 내용 |
 | --- | --- |
 | 목표 | `Store` 포트의 PostgreSQL 구현 + 마이그레이션 실행 검증 |
-| 선행 | Docker/PostgreSQL 환경 (ENV-01) |
-| 산출물 | `apps/api/src/adapters/postgres/store.ts`, `tests/db/*.test.ts` |
+| 선행 | Docker/PostgreSQL 환경 — **충족** |
+| 산출물 | `apps/api/src/adapters/postgres/store.ts`, `tests/db/*.test.ts`, `db/checks/*.sql` |
 | 완료 조건 | 빈 DB 에 마이그레이션 적용 + `npm run test:db` 통과 (메모리와 동일 시나리오) |
-| 상태 | **ENV-PENDING** |
+| 상태 | **진행 중** — W-05(적용)·W-06(제약 검증) 완료, W-07~W-09 대기 (`docs/08-work-order.md`) |
 
 ## Phase 2c — 서버 런타임 (완료)
 
