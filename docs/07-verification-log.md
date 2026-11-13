@@ -2,7 +2,7 @@
 
 - 최종 실행: 2026-11-14
 - 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db` · `test:s3` · `test:e2e` · `web:build`
-- 결과: **34 tests / pass 34 / fail 0**, DB **17 / 17**, S3 **7 / 7**, E2E **6 / 6**,
+- 결과: **43 tests / pass 43 / fail 0**, DB **17 / 17**, S3 **7 / 7**, E2E **6 / 6**,
   계약 스키마 11 · 예제 17 · OpenAPI 유효, DB 마이그레이션(2건)·제약 검사 통과
 
 ## 1. 자동 검증 항목
@@ -185,6 +185,22 @@ Playwright 로 실제 브라우저에서 검색·상세·모바일 전환을 검
 
 > 실제 Apple JWKS 토큰 검증은 App ID/Service ID 와 실제 identity token 이 필요해 아직 실행하지
 > 않았다(`ENV-09`). Fake verifier 로 서버 경로만 검증했다.
+
+## 2.9 BLE GATT 프로토콜 (W-20, 2026-11-14)
+
+| # | 검증 | 근거 | 결과 |
+| --- | --- | --- | --- |
+| 1 | 프레임 왕복 + CRC/magic/version/length/최대 크기 검증 | `tests/ble-protocol.test.ts` | 통과 |
+| 2 | 정상 전송(오프셋·SHA-256 일치) | 동일 | 통과 |
+| 3 | DATA 유실 → ACK 갭으로 재전송 | 동일 | 통과 |
+| 4 | ACK 유실 → 타임아웃 재전송 | 동일 | 통과 |
+| 5 | 중간 절단 → 부분 오프셋부터 재개 | 동일 | 통과 |
+| 6 | 중복 DATA 무시 + ACK | 동일 | 통과 |
+| 7 | 갭 DATA 거부 + ACK | 동일 | 통과 |
+| 8 | SHA 불일치 → `COMPLETE_RES.mismatch` | 동일 | 통과 |
+| 9 | 완료 파일 `LIST_RES` 메타데이터 | 동일 | 통과 |
+
+명세: `docs/12-ble-protocol.md`. 실기기 MTU·타이밍·전원 차단 복구는 `HW-PENDING`(W-21~W-24).
 
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 

@@ -102,7 +102,7 @@ flowchart LR
 | --- | --- |
 | 목표 | 실물 없이 하드웨어 의존 흐름 전체 검증 |
 | 선행 | OPEN-003, Phase 4 |
-| 산출물 | `DevicePort` 구현 3종 중 fake/simulated, 장애 주입(지연/단절/오류) |
+| 산출물 | `DevicePort` 구현 3종 중 fake/simulated, BLE GATT 프레임 계약(`packages/ble-protocol`), 장애 주입(지연/단절/오류) |
 | 테스트 | BLE/HTTP 중단·재개, 세션 만료 후 재전송 |
 | 완료 조건 | 실물 없이 E2E 시나리오 통과 |
 | 상태 | **완료(Fake)** — 실물 어댑터는 Phase 7 `HW-PENDING` |

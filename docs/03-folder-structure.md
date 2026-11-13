@@ -28,6 +28,7 @@ gyeol/
 │   ├── src/components/             # Timeline · Detail · Sidebar
 │   └── src/styles.css              # Warm Editorial 토큰
 ├── packages/
+│   ├── ble-protocol/               # GATT 프레임·전송 상태 기계 (W-20)
 │   ├── hardware-adapter/port.ts    # 웨어러블 포트 (실물/Fake 공통)
 │   ├── device-fake/index.ts        # WAV 생성·로컬 저장·전송 ACK
 │   └── mobile-fake/index.ts        # BLE 수신·재개, 업로드·재개, ACK 원장
@@ -52,6 +53,7 @@ gyeol/
 │   ├── integration.test.ts         # 전 구간 시나리오
 │   ├── async-analysis.test.ts      # 작업 큐·재시도·타임아웃·임차 회수
 │   ├── auth.test.ts                # 세션·소유자 스코프
+│   ├── ble-protocol.test.ts        # 프레임·재전송·이어받기
 │   ├── e2e/                        # Playwright 검색·상세·모바일
 │   ├── db/                         # PostgreSQL 패리티·작업 큐
 │   ├── s3/                         # S3 어댑터·전 구간
@@ -60,7 +62,7 @@ gyeol/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~11, adr/0001~0011)
+├── docs/ (00~12, adr/0001~0011)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```
 
