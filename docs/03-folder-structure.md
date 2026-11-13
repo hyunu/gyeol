@@ -49,6 +49,7 @@ gyeol/
 ├── tests/
 │   ├── integration.test.ts         # 전 구간 시나리오
 │   ├── async-analysis.test.ts      # 작업 큐·재시도·타임아웃·임차 회수
+│   ├── e2e/                        # Playwright 검색·상세·모바일
 │   ├── db/                         # PostgreSQL 패리티·작업 큐
 │   ├── s3/                         # S3 어댑터·전 구간
 │   └── unit/domain.test.ts         # 도메인 규칙

@@ -18,7 +18,7 @@
 | 비동기 분석 작업 큐 | 완료 (ADR-0007, 재시도·타임아웃·임차 회수) |
 | 웹 대시보드 (React) | 완료 — 타임라인·상세·인물 필터·키워드 검색 (`apps/web`) |
 | Fake Hardware / Fake Mobile | 완료 |
-| 통합·계약 테스트 | 완료 — 28 tests |
+| 통합·계약 테스트 | 완료 — 28 tests · E2E 6 tests |
 | PostgreSQL 마이그레이션·제약 검증 | 완료 (15 테이블, `npm run db:checks`) |
 | PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
 | 오브젝트 스토리지 | 완료 — 로컬 디스크 + S3/MinIO (`GYEOL_STORAGE`), `test:s3` 7 tests |
@@ -63,6 +63,7 @@ npm run test:s3    # S3 어댑터·전 구간 (7 tests)
 npm run web:install
 npm run web:dev      # http://127.0.0.1:5173 (API 8080 프록시)
 npm run web:build    # 타입 검사 + 프로덕션 빌드
+npm run test:e2e     # Playwright 검색·상세·모바일 E2E
 ```
 
 화면 타입은 OpenAPI 계약에서 생성한다. 계약을 바꾸면 `npm run web:api-types` 로 갱신한다.
@@ -137,7 +138,6 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 
 작업 순서와 완료 조건은 [`docs/08-work-order.md`](docs/08-work-order.md) 를 따른다.
 
-1. 검색 UI E2E 자동화 (W-17)
-2. Apple 로그인·세션 구현 (W-19, Apple 개발자 설정 필요)
-3. 삭제·내보내기 API (W-25, D-13 암호화 범위 결정 후) · 실제 AI provider (W-18)
-4. 실물 웨어러블 + iOS BLE 연동 (W-20~W-24, `HW-PENDING`)
+1. Apple 로그인·세션 구현 (W-19, Apple 개발자 설정 필요)
+2. 삭제·내보내기 API (W-25, D-13 암호화 범위 결정 후) · 실제 AI provider (W-18)
+3. 실물 웨어러블 + iOS BLE 연동 (W-20~W-24, `HW-PENDING`)

@@ -33,7 +33,8 @@ CI 는 재생성 후 diff 가 있으면 실패한다.
 ## 인증
 
 로컬 임시 헤더(`x-user-id`)를 쓴다(ADR-0003). 기본값은 데모 사용자이며,
-`localStorage.gyeol.userId` 로 바꿀 수 있다. 실제 로그인은 D-01 결정 대기다.
+`localStorage.gyeol.userId` 로 바꿀 수 있다. 실제 인증은 Apple 로그인 + 서버 세션(ADR-0010)으로
+W-19에서 연결한다.
 
 ## 상태
 

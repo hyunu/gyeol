@@ -8,6 +8,11 @@ out/
 coverage/
 *.tsbuildinfo
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
 # 환경 변수 (커밋 금지)
 .env
 .env.*

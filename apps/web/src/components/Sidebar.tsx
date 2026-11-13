@@ -87,7 +87,7 @@ export function Sidebar({
       </section>
 
       <p className="sidebar__note">
-        로컬 임시 인증으로 연결되어 있습니다. 실제 로그인은 결정 대기(D-01)입니다.
+        로컬 임시 인증으로 연결되어 있습니다. Apple 로그인은 W-19에서 연결됩니다.
       </p>
     </aside>
   );

@@ -13,5 +13,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["apps/**/*.ts", "packages/**/*.ts", "tests/**/*.ts", "tools/**/*.ts"],
-  "exclude": ["node_modules", "apps/web"]
+  "exclude": ["node_modules", "apps/web", "tests/e2e"]
 }
