@@ -39,9 +39,9 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 | --- | --- | --- | --- | --- |
 | W-05 | 마이그레이션 적용 검증 | W-03 | 빈 DB 에 `0001_init.sql` 적용, 14 테이블·확장 2종 확인 (ENV-01) | `DONE` |
 | W-06 | 제약·인덱스 실동작 검증 | W-05 | `db/checks/` 로 CHECK/FK/UNIQUE/부분 인덱스 위반이 실제 거부됨 | `DONE` |
-| W-07 | Postgres `Store` 어댑터 | W-05 | `apps/api/src/adapters/postgres/store.ts`, `Store` 포트 전 메서드 | `TODO` |
-| W-08 | DB 통합 테스트 | W-07 | `tests/db/*.test.ts` 가 메모리와 동일 시나리오 통과 (ENV-02) | `TODO` |
-| W-09 | CI DB job | W-08 | Actions service container(pgvector)에서 `npm run test:db` 통과 | `TODO` |
+| W-07 | Postgres `Store` 어댑터 | W-05 | `apps/api/src/adapters/postgres/store.ts`, `Store` 포트 전 메서드 | `DONE` |
+| W-08 | DB 통합 테스트 | W-07 | `tests/db/*.test.ts` 가 메모리와 동일 시나리오 통과 (ENV-02) | `DONE` |
+| W-09 | CI DB job | W-08 | Actions service container(pgvector)에서 `npm run test:db` 통과 | `DONE` |
 
 ### Track 2 — 스키마를 굳히는 결정
 
@@ -85,8 +85,10 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 
 ## 4. 지금 위치
 
-- 완료: Track 0 (W-01~W-04), W-05, W-06
-- 다음: **W-07** (`Store` 포트의 PostgreSQL 어댑터) → W-08 (DB 통합 테스트) → W-09 (CI DB job)
+- 완료: Track 0 (W-01~W-04), Track 1 (W-05~W-09)
+- 다음: **Track 2 결정** — W-11(코덱 측정)은 지금 착수 가능. W-10(D-05)·W-12(D-01)·W-13(D-08/D-13)은 사용자 결정 대기
+- 병렬 가능: W-16(웹 대시보드 골격)은 W-02 만 선행이므로 Track 2 와 병행 가능
+- 권장 순서: **W-11 → W-10 → W-15(비동기 분석) → W-16/W-17 → W-18**
 
 ## 5. 하지 말아야 할 순서
 

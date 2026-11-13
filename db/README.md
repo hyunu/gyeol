@@ -38,6 +38,7 @@ npm run db:migrate
 | SQL 작성 | 완료 |
 | 실제 PostgreSQL 적용 | **검증 완료** (2026-11-14, PostgreSQL 17 + pgvector 0.8.7) |
 | 제약·인덱스 실동작 | **검증 완료** — `db/checks/*.sql`, `npm run db:checks` |
+| `Store` 어댑터 | **검증 완료** — `apps/api/src/adapters/postgres/store.ts`, `npm run test:db` |
 
 ### 적용 결과 (2026-11-14)
 

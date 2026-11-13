@@ -88,6 +88,11 @@ export interface RecordingFilter {
 }
 
 export interface Store {
+  /** health 응답과 로그에 쓰는 구현 식별자. */
+  readonly kind: "memory" | "postgres";
+  /** 선택: 저장소 연결 확인. 구현이 없으면 health 는 구성 정보만 보고한다. */
+  ping?(): Promise<void>;
+
   ensureUser(id: string): Promise<User>;
 
   createDevice(device: Device): Promise<Device>;

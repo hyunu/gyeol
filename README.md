@@ -14,11 +14,11 @@
 | 스펙·요구사항 | 완료 |
 | 도메인 모델·ERD·상태 전이 | 완료 (M-01~M-04 반영) |
 | OpenAPI 계약 + 스키마 10종 | 완료 (12 오퍼레이션) |
-| Recording / Conversation API | 완료 (메모리 저장소) |
+| Recording / Conversation API | 완료 (메모리·PostgreSQL 저장소) |
 | Fake Hardware / Fake Mobile | 완료 |
 | 통합·계약 테스트 | 완료 — 17 tests |
 | PostgreSQL 마이그레이션·제약 검증 | 완료 (14 테이블, `npm run db:checks`) |
-| PostgreSQL `Store` 어댑터 | **TODO** — W-07~W-09 |
+| PostgreSQL `Store` 어댑터 | 완료 — `test:db` 10 tests |
 | 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
 
 ## 빠른 시작
@@ -26,7 +26,19 @@
 ```bash
 npm install
 npm run check      # 계약 + 타입 + 테스트 (17 tests)
-npm start          # http://127.0.0.1:8080
+npm start          # http://127.0.0.1:8080 (메모리 저장소)
+```
+
+PostgreSQL 저장소로 실행:
+
+```bash
+make db-up
+export DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol
+npm run db:migrate
+GYEOL_STORE=postgres npm start
+
+npm run db:checks  # 제약·인덱스 실동작 검증
+npm run test:db    # Store 패리티 테스트 (10 tests)
 ```
 
 로컬 개발은 임시 인증 헤더를 쓴다(ADR-0003).
@@ -87,16 +99,16 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 
 ## 알려진 제한 (의도된 현재 상태)
 
-- 저장소가 **메모리**다. 재시작하면 데이터가 사라진다(ADR-0005). 운영 배포 금지.
-- 분석이 **요청 내 동기 실행**이다(ADR-0004). 실제 AI 도입 시 작업 큐 필요.
+- 기본 저장소는 **메모리**다(ADR-0005). `GYEOL_STORE=postgres` 로 PostgreSQL 을 쓸 수 있다.
+- 분석이 **요청 내 동기 실행**이다(ADR-0004). 실제 AI 도입 시 작업 큐 필요(W-15).
 - `X-User-Id` 는 **로컬 전용**이며 `GYEOL_ENV != local` 이면 401(ADR-0003).
-- DB 마이그레이션은 작성만 됐고 실제 적용 검증은 안 됐다(`db/README.md`).
+- 오브젝트 스토리지는 **로컬 디스크**다. 운영용 S3/MinIO 어댑터는 W-14.
 
 ## 다음 단계
 
 작업 순서와 완료 조건은 [`docs/08-work-order.md`](docs/08-work-order.md) 를 따른다.
 
-1. PostgreSQL 검증·어댑터 (W-05~W-09) — `make db-up && npm run db:migrate`
+1. 스키마 결정 — D-05(임베딩 차원), D-04(코덱), D-01(인증), D-08(보존) (W-10~W-13)
 2. 웹 대시보드 (W-16·W-17)
 3. 실제 AI provider 어댑터 + 비동기 분석 (W-15·W-18)
 4. 실물 웨어러블 + iOS BLE 연동 (W-20~W-24, `HW-PENDING`)

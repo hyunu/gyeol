@@ -37,6 +37,7 @@ interface Link {
  * 의미(유니크 제약, 페이지 정렬, 검색 점수)는 PostgreSQL 구현과 맞춘다.
  */
 export class MemoryStore implements Store {
+  readonly kind = "memory" as const;
   private users = new Map<string, User>();
   private devices = new Map<string, Device>();
   private serialIndex = new Map<string, string>();

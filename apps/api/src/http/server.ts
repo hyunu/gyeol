@@ -2,6 +2,7 @@ import http from "node:http";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { MemoryStore } from "../adapters/memory/store.ts";
+import { PostgresStore } from "../adapters/postgres/store.ts";
 import { LocalDiskStorage } from "../adapters/storage/local-disk.ts";
 import { FakeAiPipeline } from "../adapters/ai/fake-pipeline.ts";
 import { defaultDeps, pagination, type Deps } from "../usecases/deps.ts";
@@ -10,6 +11,7 @@ import * as recordingUseCases from "../usecases/recordings.ts";
 import * as conversationUseCases from "../usecases/conversations.ts";
 import { methodNotAllowed, notFound, validationFailed } from "../domain/errors.ts";
 import type { ActionItemStatus } from "../domain/types.ts";
+import type { Store } from "../ports/store.ts";
 import { DEMO_USER_ID, resolveUserId } from "./auth.ts";
 import { sendEmpty, sendJson, sendProblem, readBinaryBody, readJsonBody } from "./respond.ts";
 import * as dto from "./dto.ts";
@@ -52,6 +54,16 @@ export interface AppOptions {
   version?: string;
 }
 
+/**
+ * `GYEOL_STORE` 로 저장소 어댑터를 고른다.
+ * 잘못된 값은 조용히 메모리로 떨어지지 않고 즉시 실패한다(fail-closed).
+ */
+export function createStoreFromEnv(kind = process.env.GYEOL_STORE ?? "memory"): Store {
+  if (kind === "memory") return new MemoryStore();
+  if (kind === "postgres") return new PostgresStore();
+  throw new Error(`GYEOL_STORE 값이 올바르지 않습니다: ${kind} (memory|postgres)`);
+}
+
 function split(p: string): string[] {
   return p.split("/").filter(Boolean);
 }
@@ -63,7 +75,7 @@ export function createApp(options: AppOptions = {}): http.Server {
   const deps =
     options.deps ??
     defaultDeps({
-      store: new MemoryStore(),
+      store: createStoreFromEnv(),
       storage: new LocalDiskStorage(storageDir),
       ai: new FakeAiPipeline(),
     });
@@ -74,19 +86,57 @@ export function createApp(options: AppOptions = {}): http.Server {
     routes.push({ method, segments: split(template), auth, handle });
   };
 
-  route("GET", "/healthz", false, async () => ({
-    status: 200,
-    body: {
-      status: "ok",
-      version,
-      time: deps.clock.now().toISOString(),
-      checks: [
-        { name: "store", status: "ok", detail: "memory" },
-        { name: "db", status: "skipped", detail: "메모리 저장소 사용 중 (PostgreSQL 미연결)" },
-        { name: "device-link", status: "skipped", detail: "실물 하드웨어 미연결 (HW-PENDING)" },
-      ],
-    },
-  }));
+  route("GET", "/healthz", false, async ({ deps }) => {
+    const checks: Array<{
+      name: string;
+      status: "ok" | "degraded" | "down" | "skipped";
+      detail: string;
+      latencyMs?: number;
+    }> = [{ name: "store", status: "ok", detail: deps.store.kind }];
+
+    if (deps.store.ping) {
+      const startedAt = Date.now();
+      try {
+        await deps.store.ping();
+        checks.push({
+          name: "db",
+          status: "ok",
+          detail: deps.store.kind,
+          latencyMs: Date.now() - startedAt,
+        });
+      } catch (err) {
+        checks.push({
+          name: "db",
+          status: "down",
+          detail: err instanceof Error ? err.message : String(err),
+          latencyMs: Date.now() - startedAt,
+        });
+      }
+    } else {
+      checks.push({
+        name: "db",
+        status: "skipped",
+        detail: "메모리 저장소 사용 중 (PostgreSQL 미연결)",
+      });
+    }
+
+    checks.push({
+      name: "device-link",
+      status: "skipped",
+      detail: "실물 하드웨어 미연결 (HW-PENDING)",
+    });
+
+    const status = checks.some((c) => c.status === "down")
+      ? "down"
+      : checks.some((c) => c.status === "degraded")
+        ? "degraded"
+        : "ok";
+
+    return {
+      status: 200,
+      body: { status, version, time: deps.clock.now().toISOString(), checks },
+    };
+  });
 
   route("GET", "/api/v1/info", false, async () => ({
     status: 200,

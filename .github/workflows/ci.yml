@@ -16,3 +16,35 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: gyeol
+          POSTGRES_PASSWORD: gyeol
+          POSTGRES_DB: gyeol
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U gyeol -d gyeol"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://gyeol:gyeol@localhost:5433/gyeol
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: 마이그레이션 적용
+        run: npm run db:migrate
+      - name: 제약·인덱스 검사
+        run: npm run db:checks
+      - name: PostgreSQL 통합 테스트
+        run: npm run test:db

@@ -20,7 +20,7 @@
 | R-029 | 원본 음성은 서버 저장·무결성 검증 전까지 삭제하지 않는다. | ACK 전 삭제 거부·로컬 삭제 차단 테스트 | `DONE` |
 | R-030 | 화자 식별이 불확실하면 Unknown Speaker 로 처리한다. | 임계값/격차 테스트 + person 미생성 확인 | `DONE` |
 | R-031 | 개인정보 보호·암호화·삭제·내보내기를 고려한다. | 설계 문서 반영, 암호화·내보내기 미구현 | `WIP` |
-| R-032 | PostgreSQL + pgvector 스키마와 마이그레이션을 작성한다. | `db/migrations/0001_init.sql` 작성, 적용 미검증 | `ENV-PENDING` |
+| R-032 | PostgreSQL + pgvector 스키마와 마이그레이션을 작성한다. | `db/migrations/0001_init.sql` + 적용·제약 검증 | `DONE` |
 | R-033 | Recording API (등록·업로드·상태)를 구현한다. | 계약 테스트 + 통합 테스트 12~16 | `DONE` |
 | R-034 | Conversation API (조회·검색·인물별)를 구현한다. | 통합 테스트 7~9 | `DONE` |
 | R-035 | Fake Hardware + Fake Mobile 로 전체 데이터 흐름을 통합 검증한다. | `tests/integration.test.ts` 5건 | `DONE` |

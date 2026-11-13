@@ -56,15 +56,14 @@ flowchart LR
 | 완료 조건 | 스키마/예제 커버리지 + OpenAPI 유효 + 타입 검사 통과 |
 | 상태 | **완료** (DB 실행 검증은 ENV-01) |
 
-## Phase 2b — PostgreSQL 어댑터 (진행 중)
+## Phase 2b — PostgreSQL 어댑터 (완료)
 
 | 항목 | 내용 |
 | --- | --- |
 | 목표 | `Store` 포트의 PostgreSQL 구현 + 마이그레이션 실행 검증 |
-| 선행 | Docker/PostgreSQL 환경 — **충족** |
 | 산출물 | `apps/api/src/adapters/postgres/store.ts`, `tests/db/*.test.ts`, `db/checks/*.sql` |
 | 완료 조건 | 빈 DB 에 마이그레이션 적용 + `npm run test:db` 통과 (메모리와 동일 시나리오) |
-| 상태 | **진행 중** — W-05(적용)·W-06(제약 검증) 완료, W-07~W-09 대기 (`docs/08-work-order.md`) |
+| 상태 | **완료** — W-05~W-09 (`docs/07-verification-log.md` §2.1) |
 
 ## Phase 2c — 서버 런타임 (완료)
 
@@ -84,7 +83,7 @@ flowchart LR
 | 산출물 | L1 도메인 패키지, L2 유스케이스, L3 영속 어댑터, 마이그레이션 |
 | 테스트 | 도메인 단위 테스트(불변식/상태 전이), 저장소 통합 테스트 |
 | 완료 조건 | 핵심 유스케이스가 저장소 통합 테스트로 통과 |
-| 상태 | **부분 완료** — 메모리 어댑터로 검증, PostgreSQL 어댑터는 Phase 2b(ENV-PENDING) |
+| 상태 | **완료** — 메모리·PostgreSQL 어댑터 모두 검증 (`tests/db` 10건) |
 
 ## Phase 4 — API 엣지
 

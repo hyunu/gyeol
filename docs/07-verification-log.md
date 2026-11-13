@@ -1,9 +1,9 @@
 # 검증 기록 (Phase 1)
 
 - 최종 실행: 2026-11-14
-- 명령: `npm run check` · `db:migrate` · `db:checks`
-- 결과: **17 tests / pass 17 / fail 0**, 계약 스키마 10 · 예제 15 · OpenAPI 유효,
-  DB 마이그레이션 적용 및 제약 검사 통과
+- 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db`
+- 결과: **17 tests / pass 17 / fail 0**, DB **10 tests / pass 10 / fail 0**,
+  계약 스키마 10 · 예제 15 · OpenAPI 유효, DB 마이그레이션·제약 검사 통과
 
 ## 1. 자동 검증 항목
 
@@ -37,12 +37,32 @@
 - 인물별 조회·키워드 검색·할 일 상태 변경이 동작한다.
 - 실데이터 상태에서도 응답이 계약 스키마를 만족한다.
 
+## 2.1 PostgreSQL 패리티 (2026-11-14)
+
+`PostgresStore` 가 MemoryStore 와 같은 의미를 갖는지 실제 SQL 로 확인했다 (`tests/db`, 10건).
+
+| # | 검증 | 결과 |
+| --- | --- | --- |
+| 18 | `ensureUser` 멱등 · 표시 이름 | 통과 |
+| 19 | serial 중복 → `DEVICE_ALREADY_REGISTERED`, smallint 매핑 | 통과 |
+| 20 | 멱등 키 중복 → `RECORDING_ALREADY_EXISTS`, bigint·기간 필터 | 통과 |
+| 21 | 열린 업로드 세션 1개 · 만료 · 완료 세션 허용 | 통과 |
+| 22 | 대화 상세 파생 데이터·사람·연결, Unknown 은 `people` 제외 | 통과 |
+| 23 | 인물·기간·키워드(세그먼트 본문) 검색과 페이지 | 통과 |
+| 24 | 재분석 교체(중복 없음) + 실패 시 트랜잭션 롤백 | 통과 |
+| 25 | 할 일 상태 변경, 인물 조회 | 통과 |
+| 26 | `GYEOL_STORE=postgres` API: `/healthz` db=ok + 계약 테스트 | 통과 |
+| 27 | 전 구간(PostgreSQL): 업로드 재개→ACK→분석→검색→재분석→삭제 | 통과 |
+
+- `numeric` 이 문자열이 아닌 `number` 로, `int8` 이 `number` 로 매핑되는 것을 단언한다.
+- 검색은 MemoryStore 와 같은 규칙(키워드 1.0 / 코사인 유사도, 임계값 0.35, 최신순)을 쓴다.
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |
 | --- | --- | --- | --- |
 | ENV-01 | `0001_init.sql` 실제 적용 | — | **해소 (2026-11-14)** — 14 테이블·확장 2종 적용 확인 |
-| ENV-02 | PostgreSQL `Store` 어댑터 | W-07 미구현 | `npm run test:db` (W-08) |
+| ENV-02 | PostgreSQL `Store` 어댑터 | — | **해소 (2026-11-14)** — `PostgresStore` + `tests/db` 10건 통과 |
 | ENV-03 | 실물 웨어러블(VAD·PDM·microSD·BLE) | 하드웨어 미확보 | 펌웨어 테스트 + `HW-PENDING` 절차 |
 | ENV-04 | iOS CoreBluetooth/AVFoundation 실연동 | 기기·앱 미개발 | 실기기 시나리오 |
 | ENV-05 | 실제 STT/화자분리/요약 provider | D-05 등 미확정 | provider 어댑터 계약 테스트 |
@@ -78,8 +98,7 @@ npm run contract-test    # 실행 중 서버를 OpenAPI 와 대조
 make db-up
 DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run db:migrate
 DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run db:checks
-DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run test:db   # W-08 이후 의미
+DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run test:db
 ```
 
 > `npm run test:db` 는 `tests/db/` 가 비어 있으면 **실패**한다(0 tests 거짓 통과 방지).
-> 현재는 PostgreSQL `Store` 어댑터(W-07)가 없어 의도적으로 실패한다.
