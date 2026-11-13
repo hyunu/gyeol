@@ -10,6 +10,8 @@
 ```bash
 make install   # 의존성 설치
 make check     # 계약 검증 + 테스트
+npm start      # API 실행 (http://127.0.0.1:8080)
+npm run contract-test   # 실행 중인 서버를 OpenAPI 와 대조
 ```
 
 요구사항: Node.js 20+ (계약 검증 도구용)
@@ -26,6 +28,7 @@ make check     # 계약 검증 + 테스트
 | API 규약 | 완료 — `docs/05-api-conventions.md` |
 | 공통 계약 | 완료 — `contracts/` (스키마 3 · OpenAPI) |
 | 계약 검증 파이프라인 | 완료 — CI + `npm run check` |
+| 워킹 스켈레톤 API | 완료 — `apps/api/` (`/healthz`, `/api/v1/info`) + 계약 테스트 |
 | 도메인 모델 | 미착수 — 스펙 필요 |
 | 하드웨어 | 미착수 — `HW-PENDING` |
 

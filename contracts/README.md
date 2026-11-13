@@ -40,6 +40,18 @@ contracts/examples/domain/invalid/foo.json    # 최소 1개 권장
 | `schemas/common/page.json` | 목록 페이지 봉투 |
 | `schemas/common/health.json` | 상태 확인 응답 |
 
+## 계약 테스트
+
+구현이 계약을 지키는지 확인한다. 스택과 무관하게 동작한다(HTTP 만 사용).
+
+```bash
+npm start                 # 터미널 1
+npm run contract-test     # 터미널 2 — GET 오퍼레이션 응답을 스키마로 검증
+```
+
+- 제외할 오퍼레이션은 `x-gyeol-skip-contract-test: true` 를 붙인다.
+- 인증/경로 파라미터가 필요한 엔드포인트는 별도 시나리오 테스트를 작성한다.
+
 ## 주의
 
 - 현재 계약은 `x-gyeol-provisional: true` 인 **초안**이다. 도메인 스키마는

@@ -5,8 +5,10 @@
   "description": "GYEOL (가칭) — 추모/기념 프로젝트. 계약 우선(contract-first) 기반 저장소.",
   "type": "module",
   "scripts": {
+    "start": "node apps/api/server.mjs",
     "test": "node --test tools/test/*.test.mjs",
     "validate": "node tools/validate-contracts.mjs",
+    "contract-test": "node tools/contract-test.mjs",
     "check": "npm run validate && npm test"
   },
   "devDependencies": {

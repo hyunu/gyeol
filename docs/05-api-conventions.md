@@ -48,6 +48,7 @@
 | `BAD_REQUEST` | 400 | 요청 형식 오류 | v0.1 |
 | `NOT_FOUND` | 404 | 대상 없음 | v0.1 |
 | `CONFLICT` | 409 | 상태 충돌 | v0.1 |
+| `METHOD_NOT_ALLOWED` | 405 | 경로는 있으나 메서드 미지원 (`Allow` 헤더 필수) | v0.1 |
 | `UNAUTHORIZED` | 401 | 인증 필요/실패 | 예정 (OPEN-004) |
 | `FORBIDDEN` | 403 | 권한 없음 | 예정 (OPEN-004) |
 | `RATE_LIMITED` | 429 | 호출 제한 | 예정 |

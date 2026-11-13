@@ -23,14 +23,20 @@ gyeol/
 │   ├── 05-api-conventions.md
 │   └── adr/
 │       └── 0001-contract-first.md
+├── apps/
+│   └── api/
+│       └── server.mjs           # L4 워킹 스켈레톤 (프레임워크 없음)
 ├── contracts/
 │   ├── README.md
 │   ├── openapi/openapi.yaml
 │   ├── schemas/common/{problem,page,health}.json
 │   └── examples/common/{valid,invalid}/*.json
 └── tools/
-    ├── validate-contracts.mjs
-    └── test/contracts.test.mjs
+    ├── validate-contracts.mjs   # L0 계약 검증
+    ├── contract-test.mjs        # 실행 중 서버 ↔ OpenAPI 블랙박스 검증
+    └── test/
+        ├── contracts.test.mjs
+        └── api.test.mjs
 ```
 
 ## 2. 목표 구조 (스택 확정 후 채움)

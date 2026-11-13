@@ -8,7 +8,8 @@
 
 ```mermaid
 flowchart LR
-  P0[Phase 0<br/>기반·계약] --> P1[Phase 1<br/>스펙 확정]
+  P0[Phase 0<br/>기반·계약] --> P0b[Phase 0b<br/>워킹 스켈레톤]
+  P0b --> P1[Phase 1<br/>스펙 확정]
   P1 --> P2[Phase 2<br/>도메인 계약]
   P2 --> P3[Phase 3<br/>도메인 코어+영속]
   P3 --> P4[Phase 4<br/>API 엣지]
@@ -26,6 +27,16 @@ flowchart LR
 | 완료 조건 | `npm run check` 통과 (스키마 3 · 예제 5 · OpenAPI 유효) |
 | 상태 | **완료** — 근거: `tools/test/contracts.test.mjs` 실행 로그 |
 | 비고 | 도메인 엔티티는 스펙 부재로 의도적으로 만들지 않음 |
+
+## Phase 0b — 워킹 스켈레톤 (완료)
+
+| 항목 | 내용 |
+| --- | --- |
+| 목표 | 계약 → 구현 → 계약 테스트의 왕복이 실제로 동작함을 증명 |
+| 산출물 | `apps/api/server.mjs`(`/healthz`, `/api/v1/info`, problem+json 404/405), `tools/contract-test.mjs`(블랙박스 계약 검증), API 테스트 4건 |
+| 완료 조건 | `npm run check` 통과 (테스트 6건) + 계약 위반 주입 시 테스트 실패 확인 |
+| 상태 | **완료** — 근거: `tools/test/api.test.mjs` 실행 로그 |
+| 비고 | 프레임워크 미사용. 스택 확정 시 L4 만 교체하면 된다. 도메인 로직 없음. |
 
 ## Phase 1 — 스펙 확정 (대기)
 
