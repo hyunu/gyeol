@@ -26,7 +26,7 @@
     "codec": {
       "type": "string",
       "minLength": 1,
-      "description": "D-04 미확정. wav_pcm_s16le / adpcm_ima_wav / opus_ogg 등 자유 문자열."
+      "description": "D-04 제안(ADR-0006): wav_ima_adpcm / wav_pcm_s16le / opus_ogg_16k 등 자유 문자열. 컨테이너_코덱_비트레이트 규칙."
     },
     "codecParams": { "type": ["object", "null"] },
     "sampleRateHz": { "type": "integer", "minimum": 1 },

@@ -10,7 +10,10 @@ export interface CapturedRecording {
   startedAt: Date;
   endedAt: Date;
   durationMs: number;
-  /** D-04 미확정. 현재 테스트 기준은 wav_pcm_s16le. */
+  /**
+   * D-04 제안: 기기 저장·전송은 `wav_ima_adpcm` (ADR-0006, 승인 대기).
+   * Phase 1 테스트 기준은 계속 `wav_pcm_s16le` 이다.
+   */
   codec: string;
   sampleRateHz: number;
   channels: number;

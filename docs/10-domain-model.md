@@ -120,7 +120,7 @@ erDiagram
 | `ended_at` | timestamptz | N | CHECK > started_at | |
 | `captured_offset_min` | smallint | Y | CHECK -840..840 | 기기 로컬 오프셋(표시용) |
 | `duration_ms` | integer | N | CHECK > 0 | |
-| `codec` | text | N | 인덱스 대상, **CHECK 없음** (M-02) | 값 예: `wav_pcm_s16le`, `adpcm_ima_wav`, `opus_ogg`. 코덱 확정 전까지 자유 문자열 |
+| `codec` | text | N | 인덱스 대상, **CHECK 없음** (M-02) | 값 예: `wav_pcm_s16le`, `wav_ima_adpcm`, `opus_ogg_16k`. ADR-0006 참조 |
 | `codec_params` | jsonb | Y | | bit depth, frame size 등 코덱별 파라미터 |
 | `sample_rate_hz` | integer | N | CHECK > 0 | 후보: 16000 |
 | `channels` | smallint | N | CHECK > 0 | 후보: 1 |
@@ -522,7 +522,7 @@ erDiagram
 | D-01 | 인증/가입 방식 | `users.auth_subject` 의미 | TBD |
 | D-02 | 다중 기기·가족 공유 | `devices.user_id` 범위 | 1인 1기기 |
 | D-03 | Unknown Speaker 표현 | person 행 생성 여부 | 클러스터 NULL 방식(본 설계) |
-| D-04 | 오디오 코덱 | `codec`, 용량 | **실험값**: WAV PCM 16k mono 를 테스트 기준으로 사용. ADPCM·Opus 비교 후 결정 |
+| D-04 | 오디오 코덱 | `codec`, 용량 | **제안: `wav_ima_adpcm` (16k mono), 테스트 기준 `wav_pcm_s16le` 유지** — `docs/adr/0006-audio-codec.md`, 승인 대기 |
 | D-05 | 임베딩 모델·차원 | pgvector 컬럼 차원 | 화자 256 / 텍스트 768 |
 | D-06 | 청크 크기·세션 만료 | 이어받기 단위 | 256 KiB / 24h |
 | D-07 | 한국어 검색 방식 | FTS 토크나이저 | `simple` + 키워드 배열 |
