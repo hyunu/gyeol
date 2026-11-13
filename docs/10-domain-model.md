@@ -1,6 +1,6 @@
-# Phase 1 도메인 모델 및 ERD (설계안 v1.0 — 승인 요청)
+# Phase 1 도메인 모델 및 ERD (v1.1 — 승인 반영)
 
-- 상태: **검토 대기** (승인 후 마이그레이션·코드 생성)
+- 상태: **승인됨** (2026-11-13). M-01~M-04 반영 완료.
 - 기준 문서: `MEMORIAL_PROJECT_SPEC.md` v1.0
 - 범위: 서버(PostgreSQL) 도메인. iOS 로컬 DB·펌웨어 저장소는 §7 에 별도 기술.
 
@@ -38,7 +38,8 @@ erDiagram
     devices ||--o{ recordings : "captures"
 
     recordings ||--o{ upload_sessions : "upload attempts"
-    recordings ||--o| conversations : "produces (1:1)"
+    recordings ||--o{ recording_conversations : "M:N (offset)"
+    conversations ||--o{ recording_conversations : "M:N (offset)"
 
     conversations ||--o{ speaker_clusters : "diarization"
     conversations ||--o{ transcript_segments : "transcript"
@@ -54,10 +55,12 @@ erDiagram
 
 읽는 법:
 
-- `recordings` 는 1:1 로 `conversations` 를 만든다. 분석 실패 시 conversation 은 없고
-  `recording.status` 로 실패를 표현한다(빈 껍데기 행을 만들지 않는다).
+- `recordings` ↔ `conversations` 는 **N:M** 이다(`recording_conversations`, M-01). 하나의 녹음에
+  여러 대화가 있을 수 있고, 여러 녹음에 걸친 하나의 대화도 표현한다. 연결 행이
+  `start_offset_ms`/`end_offset_ms` 로 녹음 구간을 가리킨다.
+- 분석 실패 시 conversation 행은 만들지 않고 `recording.status` 로 표현한다(빈 껍데기 금지).
 - 화자 식별은 `speaker_clusters.person_id` 로 연결한다. `persons` 는 **식별된 사람만**
-  보관하므로, 미확인 화자는 person 행을 만들지 않는다(D-03 승인 필요).
+  보관하므로, 미확인 화자는 person 행을 만들지 않는다(D-03 승인).
 - 인물↔대화는 다대다이며 `speaker_clusters` 가 연결 테이블 역할을 한다.
 
 ---
@@ -117,7 +120,8 @@ erDiagram
 | `ended_at` | timestamptz | N | CHECK > started_at | |
 | `captured_offset_min` | smallint | Y | CHECK -840..840 | 기기 로컬 오프셋(표시용) |
 | `duration_ms` | integer | N | CHECK > 0 | |
-| `codec` | text | N | CHECK IN (`wav_pcm_s16le`,`opus_ogg`) | D-04 |
+| `codec` | text | N | 인덱스 대상, **CHECK 없음** (M-02) | 값 예: `wav_pcm_s16le`, `adpcm_ima_wav`, `opus_ogg`. 코덱 확정 전까지 자유 문자열 |
+| `codec_params` | jsonb | Y | | bit depth, frame size 등 코덱별 파라미터 |
 | `sample_rate_hz` | integer | N | CHECK > 0 | 후보: 16000 |
 | `channels` | smallint | N | CHECK > 0 | 후보: 1 |
 | `byte_size` | bigint | N | CHECK > 0 | 원본 크기 |
@@ -126,7 +130,9 @@ erDiagram
 | `status` | text | N | `'initiated'` CHECK (§6.2) | |
 | `vad` | jsonb | Y | | VAD 파라미터·구간 수 등 |
 | `uploaded_at` | timestamptz | Y | | 마지막 바이트 수신 완료 |
-| `verified_at` | timestamptz | Y | | 무결성 검증 완료 (= 클라이언트 삭제 허가 시점) |
+| `integrity_verified_at` | timestamptz | Y | | 크기·SHA-256 검증 완료 시각 |
+| `storage_verified_at` | timestamptz | Y | | Object Storage 저장 완료 확인 시각 |
+| `client_ack_at` | timestamptz | Y | | 클라이언트가 최종 ACK 를 수신·확인한 시각 (M-04) |
 | `analyzed_at` | timestamptz | Y | | 분석 완료 |
 | `purged_at` | timestamptz | Y | | 원본 오디오 삭제 완료 |
 | `created_at` / `updated_at` | timestamptz | N | `now()` | |
@@ -161,8 +167,7 @@ erDiagram
 | 필드 | 타입 | NULL | 제약/기본 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | uuid | N | PK | |
-| `recording_id` | uuid | N | UNIQUE, FK → recordings | 1:1 |
-| `user_id` | uuid | N | FK → users | |
+| `user_id` | uuid | N | FK → users | 조회 범위 |
 | `title` | text | Y | length ≤ 200 | AI 생성 제목 |
 | `summary` | text | Y | | 요약 |
 | `language` | text | N | `'ko'` | BCP-47 |
@@ -173,7 +178,7 @@ erDiagram
 | `created_at` / `updated_at` | timestamptz | N | `now()` | |
 | `deleted_at` | timestamptz | Y | | 분석 결과만 삭제(원본 유지) |
 
-- 인덱스: `unique(recording_id)`, `(user_id, started_at DESC)`
+- 인덱스: `(user_id, started_at DESC)`, `(status)`
 - 재분석: 기존 행을 UPDATE 하고 `analysis_version++`. 이력 보관은 TBD(D-10).
 
 ### 3.6 `speaker_clusters`
@@ -279,6 +284,35 @@ erDiagram
 | `embedding` | vector(N) | N | | |
 | `created_at` | timestamptz | N | `now()` | |
 
+### 3.13 `recording_conversations` (M-01)
+
+| 필드 | 타입 | NULL | 제약/기본 | 설명 |
+| --- | --- | --- | --- | --- |
+| `recording_id` | uuid | N | FK → recordings ON DELETE CASCADE | |
+| `conversation_id` | uuid | N | FK → conversations ON DELETE CASCADE | |
+| `start_offset_ms` | integer | N | CHECK ≥ 0 | 녹음 시작 기준 구간 시작 |
+| `end_offset_ms` | integer | N | CHECK > start_offset_ms | 구간 끝 |
+| `created_at` | timestamptz | N | `now()` | |
+
+- PK `(recording_id, conversation_id)` — 같은 쌍의 중복 연결 금지.
+- 인덱스: `(conversation_id)` (인물·날짜별 대화 조회), `(recording_id, start_offset_ms)`
+- 한 대화가 여러 녹음에 걸치면 녹음 수만큼 행이 생기고, 오프셋으로 각 구간을 가리킨다.
+- `end_offset_ms` 는 해당 녹음 내 구간 끝이며 `duration_ms` 를 넘지 않는다(애플리케이션 가드).
+
+### 3.14 `speaker_id_thresholds` (M-03)
+
+| 필드 | 타입 | NULL | 제약/기본 | 설명 |
+| --- | --- | --- | --- | --- |
+| `provider` | text | N | PK 일부 | 임베딩 제공자 |
+| `model` | text | N | PK 일부 | 모델 식별자 |
+| `threshold` | numeric(4,3) | N | `0.800`, CHECK 0..1 | 유사도 하한(실험값) |
+| `margin` | numeric(4,3) | N | `0.050`, CHECK 0..1 | 1위-2위 최소 격차(실험값) |
+| `is_experimental` | boolean | N | `true` | 기술 검증 전 값 표시 |
+| `updated_at` | timestamptz | N | `now()` | |
+
+- 모델별로 임계값을 다르게 둘 수 있다. 행이 없으면 전역 기본값(0.800/0.050)을 쓴다.
+- **임계값·마진 중 하나라도 미달이면 `unknown`** 처리한다(오식별 방지 우선, M-03).
+
 ---
 
 ## 4. 관계 요약
@@ -290,7 +324,7 @@ erDiagram
 | users → persons | 1:N | CASCADE |
 | devices → recordings | 1:N | RESTRICT |
 | recordings → upload_sessions | 1:N | CASCADE |
-| recordings → conversations | 1:1 | CASCADE (파생 삭제) |
+| recordings ↔ conversations | N:M (`recording_conversations`) | 연결 행 CASCADE, 대화·녹음은 독립 |
 | conversations → speaker_clusters / segments / entities / actions / embedding | 1:N | CASCADE |
 | speaker_clusters → transcript_segments | 1:N | SET NULL |
 | persons → speaker_clusters | 1:N (0..1 연결) | SET NULL + `identification_status='unknown'` |
@@ -332,20 +366,35 @@ erDiagram
 | --- | --- | --- | --- | --- |
 | `initiated` | 첫 청크 수신 | 세션 `open`, 오프셋 일치 | `uploading` | `upload_sessions.received_bytes` 증가 |
 | `uploading` | 추가 청크 | 오프셋 일치 | `uploading` | 이어받기 지점 갱신 |
-| `uploading` | 전송 완료 | `received == expected` | (검증 단계) | SHA-256·크기 대조 |
-| (검증) | 검증 성공 | 해시·크기 일치 | `stored` | `verified_at=now()`, 세션 `completed` |
-| (검증) | 검증 실패 | 불일치 | `integrity_failed` | 임시 바이트 폐기, 세션 `aborted` |
-| `integrity_failed` | 재업로드 시작 | 새 세션 발급 | `initiated` | `expected_*` 재설정 가능 |
-| `stored` | 분석 요청 | 세션 `completed` | `analyzing` | 파이프라인 시작 |
-| `analyzing` | 성공 | conversation 생성됨 | `analyzed` | `analyzed_at` |
+| `uploading` | 전송 완료 | `received == expected` | (검증 단계) | 크기·SHA-256 대조 + Object Storage 저장 확인 |
+| (검증) | 검증·저장 완료 | 크기·해시 일치 **그리고** 오브젝트 저장 성공 | `stored` | `integrity_verified_at`, `storage_verified_at`, `storage_key` 기록 |
+| (검증) | 검증 실패 | 불일치 또는 저장 실패 | `integrity_failed` | 임시 바이트 폐기, 세션 `aborted` |
+| `integrity_failed` | 재업로드 시작 | 새 세션 발급 | `initiated` | `expected_*` 재설정 |
+| `stored` | 분석 요청 | `storage_verified_at` 존재 | `analyzing` | 파이프라인 시작 |
+| `analyzing` | 성공 | conversation 생성·연결됨 | `analyzed` | `analyzed_at` |
 | `analyzing` | 실패 | — | `analysis_failed` | 오류 기록 |
 | `analysis_failed` | 재시도 | — | `analyzing` | 시도 횟수 증가 |
 | `analyzed` | 재분석 | 사용자 요청 | `analyzing` | `analysis_version++` |
-| `stored`/`analyzed` | 보존 만료·사용자 삭제 | — | `purged` | 오디오 삭제, `storage_key=NULL`, `purged_at` |
-| 임의 | 사용자 삭제 | — | (변경 없음) | `deleted_at` 설정, 조회 제외 |
+| `stored`/`analyzed` | 원본 삭제 | **§6.2.1 의 5개 조건 모두 충족** | `purged` | 오디오 삭제, `storage_key=NULL`, `purged_at` |
+| 임의 | 사용자 삭제(soft) | — | (변경 없음) | `deleted_at` 설정, 조회 제외 |
+
+#### 6.2.1 원본 삭제 허용 조건 (M-04)
+
+다음 **모두** 충족해야 한다. 하나라도 미충족이면 삭제 요청은 `409 RECORDING_NOT_DELETABLE`.
+
+| # | 조건 | 저장 위치 |
+| --- | --- | --- |
+| 1 | 파일 크기 검증 완료 | 크기 비교는 검증 시점에 수행, `integrity_verified_at` 로 확정 |
+| 2 | SHA-256 검증 완료 | 동일 |
+| 3 | Object Storage 저장 완료 | `storage_verified_at` |
+| 4 | DB 에 저장 위치·검증 결과 기록 | `storage_key`, 두 검증 시각 |
+| 5 | 클라이언트 최종 ACK | `client_ack_at` (`POST /recordings/{id}/ack`) |
+
+- 업로드 실패·세션 만료는 **Recording 삭제가 아니다**. `open` 세션이 만료되면 새 세션을
+  발급해 재전송한다(`POST /recordings/{id}/upload-sessions`).
+- 삭제 API 는 5조건 미충족 시 409 로 거부하고, 클라이언트는 계속 보관한다.
 
 > `deleted_at` 은 상태가 아니라 가시성 플래그다. purge 와 별개로 동작한다.
-> **`stored` 이전에는 클라이언트에 삭제 허가를 내리지 않는다(P2).**
 
 ### 6.3 `upload_session.status`
 
@@ -440,9 +489,9 @@ erDiagram
 
 | 요청 | recordings | conversations 이하 | 오브젝트 | 비고 |
 | --- | --- | --- | --- | --- |
-| 파생 데이터만 삭제 | 유지 | 삭제 | 유지 | 재분석 가능 |
-| 원본 삭제(보존 만료) | `purged` | 유지 | 삭제 | 요약·검색은 남음(D-11) |
-| 녹음 전체 삭제 | soft delete + purge | CASCADE 삭제 | 삭제 | 되돌릴 수 없음 |
+| 파생 데이터만 삭제 | 유지 | 삭제 + 연결 행 삭제 | 유지 | 재분석 가능 |
+| 원본 삭제(5조건 충족) | `purged` | 유지 | 삭제 | 요약·검색은 남음(D-11) |
+| 녹음 전체 삭제 | soft delete + purge | 연결 행만 삭제 | 삭제 | 대화는 다른 녹음과 연결돼 있으면 유지 |
 | 인물 삭제 | 유지 | 클러스터 `person_id=NULL` | 유지 | 임베딩 삭제 |
 | 계정 삭제 | 전부 purge | 전부 purge | 전부 삭제 | 절차 후 실행 |
 
@@ -473,7 +522,7 @@ erDiagram
 | D-01 | 인증/가입 방식 | `users.auth_subject` 의미 | TBD |
 | D-02 | 다중 기기·가족 공유 | `devices.user_id` 범위 | 1인 1기기 |
 | D-03 | Unknown Speaker 표현 | person 행 생성 여부 | 클러스터 NULL 방식(본 설계) |
-| D-04 | 오디오 코덱/포맷 | `codec`, 용량 | WAV PCM 16k mono (우선) |
+| D-04 | 오디오 코덱 | `codec`, 용량 | **실험값**: WAV PCM 16k mono 를 테스트 기준으로 사용. ADPCM·Opus 비교 후 결정 |
 | D-05 | 임베딩 모델·차원 | pgvector 컬럼 차원 | 화자 256 / 텍스트 768 |
 | D-06 | 청크 크기·세션 만료 | 이어받기 단위 | 256 KiB / 24h |
 | D-07 | 한국어 검색 방식 | FTS 토크나이저 | `simple` + 키워드 배열 |
@@ -481,27 +530,34 @@ erDiagram
 | D-09 | VAD 파라미터 | `devices.config` | TBD |
 | D-10 | 분석 이력 보관 | 재분석 이력 | 최신본만 |
 | D-11 | 원본 purge 후 파생 유지 | 삭제 전파 | 파생 유지 |
-| D-12 | 화자 제안 임계값 | `suggested` 가드 | 0.80 |
+| D-12 | 화자 제안 임계값 | `suggested` 가드 | **실험값** 0.80 / margin 0.05 — `speaker_id_thresholds` 로 모델별 설정 |
 | D-13 | DB 암호화 범위 | 개인정보 | 전화번호류만 |
 | D-14 | 주변인 녹음 동의 | 법적 요구 | TBD |
 | D-15 | 감사 로그 | 규제 대응 | Phase 2 |
 
 ---
 
-## 11. 승인 요청 (이 설계로 진행해도 되는가)
+## 11. 승인 결과 (2026-11-13)
 
-아래 5개만 확인해 주시면 마이그레이션과 코드를 생성합니다.
+승인됨. 아래 수정 사항을 반영했다.
 
-1. **D-03** — Unknown Speaker 를 `persons` 행으로 만들지 않고 `speaker_clusters.person_id = NULL`
-   로 표현. (인물 목록이 깨끗해지고 병합 근거가 명확해짐)
-2. **1:1** — `recordings` ↔ `conversations` 1:1, 분석 실패 시 conversation 행을 만들지 않고
-   `recording.status` 로만 표현.
-3. **`stored` 시점** — 서버가 크기·SHA-256 을 검증한 순간이 폰의 삭제 허가 시점.
-4. **`speaker_clusters` 추가** — 요청하신 5개 엔티티 외에 화자 분리 결과를 담는 테이블을
-   추가(없으면 세그먼트에 화자 문자열을 중복 저장해야 함).
-5. **TBD 기본값** — 위 표의 "제안 기본값"으로 잠정 확정하고, 변경 시 마이그레이션으로
-   따라가는 방식.
+| ID | 수정 사항 | 반영 위치 |
+| --- | --- | --- |
+| M-01 | Recording ↔ Conversation 을 N:M 으로. `recording_conversations`(offset 포함) 도입 | §2, §3.13, §4 |
+| M-02 | 코덱 미확정. `codec` 자유 문자열 + `codec_params` jsonb, 비교 항목 문서화 | §3.3, §10 D-04 |
+| M-03 | 모델별 임계값 테이블 `speaker_id_thresholds`, 미달 시 Unknown | §3.14, §6.5 |
+| M-04 | 삭제 5조건(크기·SHA-256·스토리지 저장·DB 기록·클라이언트 ACK) 명시 | §3.3, §6.2.1 |
 
-승인해 주시면 다음 순서로 진행합니다:
-`0001_init.sql` → OpenAPI 확장 → 도메인 코어/유스케이스 → Recording·Conversation API →
-Fake Hardware/Mobile → 통합 테스트(원본→검증→분석→검색 전 구간).
+추가 원칙:
+
+- D-04, D-05, D-08, D-12, D-14 등은 기술 검증 전 최종 확정하지 않는다. 제안값은
+  **실험값/설정값**으로 취급하며 근거와 변경 가능성을 문서에 남긴다.
+- `X-User-Id` 임시 헤더는 **로컬 개발 환경에서만** 허용하고, 외부 접근 환경에서는 차단한다
+  (`GYEOL_ENV != local` → 401). ADR-0003 참조.
+
+## 12. 변경 이력
+
+| 버전 | 날짜 | 변경 |
+| --- | --- | --- |
+| 1.0 | 2026-11-13 | 최초 설계안 |
+| 1.1 | 2026-11-13 | 승인 반영: M-01(연결 테이블), M-02(코덱 유연화), M-03(모델별 임계값), M-04(삭제 5조건) |

@@ -1,44 +1,47 @@
-# 프로젝트 폴더 구조 (초안 v0.1)
+# 프로젝트 폴더 구조 (v1.0)
 
-- 상태: **잠정** — 애플리케이션 스택 미확정(OPEN-002)
+- 상태: **확정** (2026-11-13, 스택 확정 및 Phase 1 구현 반영)
 - 원칙: 이미 만든 자산(문서, 계약, 검증 도구)은 위치를 바꾸지 않는다.
 
 ## 1. 현재 구조 (실제)
 
 ```text
 gyeol/
-├── .github/workflows/ci.yml     # 계약 검증 + 테스트
-├── .editorconfig
-├── .gitignore
-├── Makefile                     # install / check / validate / test
-├── package.json                 # 계약 검증 도구 전용 (앱 런타임 아님)
-├── README.md
-├── MEMORIAL_PROJECT_SPEC.md     # 기준 문서 (초안, 사용자 확정 필요)
-├── docs/
-│   ├── 00-repository-analysis.md
-│   ├── 01-requirements.md
-│   ├── 02-architecture.md
-│   ├── 03-folder-structure.md
-│   ├── 04-development-plan.md
-│   ├── 05-api-conventions.md
-│   ├── 06-phase1-requirements.md
-│   ├── 10-domain-model.md       # Phase 1 ERD/필드/상태전이 (승인 대기)
-│   └── adr/
-│       └── 0001-contract-first.md
-├── apps/
-│   └── api/
-│       └── server.mjs           # L4 워킹 스켈레톤 (프레임워크 없음)
+├── MEMORIAL_PROJECT_SPEC.md        # 최상위 기준 문서 v1.0 (확정)
+├── apps/api/
+│   ├── server.mjs                  # 실행 진입점 (얇은 래퍼)
+│   └── src/
+│       ├── domain/                 # L1: 순수 규칙 (상태전이·삭제조건·화자판정)
+│       ├── ports/                  # Store / AiPipeline / ObjectStorage 계약
+│       ├── usecases/               # L2: 디바이스·녹음·대화 유스케이스
+│       ├── adapters/
+│       │   ├── memory/store.ts     # 기준 구현 (테스트·개발)
+│       │   ├── storage/local-disk.ts
+│       │   └── ai/fake-pipeline.ts
+│       └── http/                   # L4: 라우팅·검증·problem+json·DTO
+├── packages/
+│   ├── hardware-adapter/port.ts    # 웨어러블 포트 (실물/Fake 공통)
+│   ├── device-fake/index.ts        # WAV 생성·로컬 저장·전송 ACK
+│   └── mobile-fake/index.ts        # BLE 수신·재개, 업로드·재개, ACK 원장
 ├── contracts/
-│   ├── README.md
-│   ├── openapi/openapi.yaml
-│   ├── schemas/common/{problem,page,health}.json
-│   └── examples/common/{valid,invalid}/*.json
-└── tools/
-    ├── validate-contracts.mjs   # L0 계약 검증
-    ├── contract-test.mjs        # 실행 중 서버 ↔ OpenAPI 블랙박스 검증
-    └── test/
-        ├── contracts.test.mjs
-        └── api.test.mjs
+│   ├── openapi/openapi.yaml        # 12개 오퍼레이션
+│   ├── schemas/common/*.json       # problem, page, health
+│   ├── schemas/domain/*.json       # device, recording, session, conversation…
+│   └── examples/**/{valid,invalid}
+├── db/
+│   ├── migrations/0001_init.sql    # 14개 테이블 (실행 검증 ENV-PENDING)
+│   └── README.md
+├── deploy/docker-compose.yml       # pgvector 로컬 DB
+├── scripts/db-migrate.mjs          # 체크섬 기반 마이그레이션 러너
+├── tests/
+│   ├── integration.test.ts         # 전 구간 5 시나리오
+│   └── unit/domain.test.ts         # 규칙 6건
+├── tools/
+│   ├── validate-contracts.mjs
+│   ├── contract-test.mjs
+│   └── test/
+├── docs/ (00~07, 10, adr/0001~0005)
+└── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```
 
 ## 2. 목표 구조 (스택 확정 — Phase 1)

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/upload-session.json",
+  "title": "UploadSession",
+  "description": "재개 가능한 업로드 세션. nextOffset 부터 이어 보내면 된다. 세션 만료는 Recording 삭제가 아니다.",
+  "type": "object",
+  "required": [
+    "id", "recordingId", "status", "expectedBytes", "receivedBytes",
+    "chunkSizeBytes", "nextOffset", "expiresAt", "createdAt"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "recordingId": { "type": "string", "format": "uuid" },
+    "status": { "type": "string", "enum": ["open", "completed", "aborted", "expired"] },
+    "expectedBytes": { "type": "integer", "minimum": 1 },
+    "receivedBytes": { "type": "integer", "minimum": 0 },
+    "chunkSizeBytes": { "type": "integer", "minimum": 1 },
+    "nextOffset": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "클라이언트가 다음에 보내야 할 바이트 오프셋"
+    },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": ["string", "null"], "format": "date-time" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

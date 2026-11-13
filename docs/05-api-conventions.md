@@ -46,11 +46,19 @@
 | --- | --- | --- | --- |
 | `VALIDATION_FAILED` | 422 | 필드 검증 실패 | v0.1 |
 | `BAD_REQUEST` | 400 | 요청 형식 오류 | v0.1 |
+| `UNAUTHORIZED` | 401 | 인증 필요/실패 (임시 헤더 포함) | v0.2 |
 | `NOT_FOUND` | 404 | 대상 없음 | v0.1 |
-| `CONFLICT` | 409 | 상태 충돌 | v0.1 |
 | `METHOD_NOT_ALLOWED` | 405 | 경로는 있으나 메서드 미지원 (`Allow` 헤더 필수) | v0.1 |
-| `UNAUTHORIZED` | 401 | 인증 필요/실패 | 예정 (OPEN-004) |
-| `FORBIDDEN` | 403 | 권한 없음 | 예정 (OPEN-004) |
+| `CONFLICT` | 409 | 상태 충돌 | v0.1 |
+| `RECORDING_NOT_DELETABLE` | 409 | M-04 삭제 5조건 미충족 (`detail` 에 사유) | v0.2 |
+| `RECORDING_NOT_STORED` | 409 | 검증 전 분석/ACK 시도 | v0.2 |
+| `RECORDING_PURGED` | 409 | 원본 삭제된 녹음에 세션 발급 시도 | v0.2 |
+| `OFFSET_MISMATCH` | 409 | 청크 오프셋 불일치 (`detail` 에 received) | v0.2 |
+| `SESSION_NOT_OPEN` | 409 | 완료·중단·만료된 세션 사용 | v0.2 |
+| `ANALYSIS_FAILED` | 409 | 분석 파이프라인 실패 | v0.2 |
+| `INVALID_ACTION_ITEM_TRANSITION` | 409 | 허용되지 않은 할 일 상태 전이 | v0.2 |
+| `INVALID_DEVICE_TRANSITION` | 409 | 허용되지 않은 기기 수명주기 전이 | v0.2 |
+| `DEVICE_ALREADY_REGISTERED` | 409 | 동일 serialNo 존재 | v0.2 |
 | `RATE_LIMITED` | 429 | 호출 제한 | 예정 |
 | `INTERNAL_ERROR` | 500 | 내부 오류 | v0.1 |
 | `DEPENDENCY_UNAVAILABLE` | 503 | 의존성 장애 | v0.1 |

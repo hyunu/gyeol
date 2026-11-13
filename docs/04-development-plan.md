@@ -38,28 +38,44 @@ flowchart LR
 | 상태 | **완료** — 근거: `tools/test/api.test.mjs` 실행 로그 |
 | 비고 | 프레임워크 미사용. 스택 확정 시 L4 만 교체하면 된다. 도메인 로직 없음. |
 
-## Phase 1 — 스펙 확정 및 도메인 설계 (검토 대기)
+## Phase 1 — 스펙 확정 및 도메인 설계 (완료)
 
 | 항목 | 내용 |
 | --- | --- |
 | 목표 | `MEMORIAL_PROJECT_SPEC.md` 확정 및 OPEN-001~004 해소 |
 | 산출물 | 기준 문서 v1.0(확정), `docs/06-phase1-requirements.md`, `docs/10-domain-model.md`(ERD·필드·상태전이·생명주기) |
 | 완료 조건 | 설계 §11 의 5개 결정 승인 |
-| 상태 | **설계 완료 / 승인 대기** (D-03, 1:1, `stored` 시점, `speaker_clusters`, TBD 기본값) |
-| 비고 | 승인 전 마이그레이션·코드를 생성하지 않는다 |
+| 상태 | **완료** — 2026-11-13 승인(M-01~M-04 반영) |
+| 비고 | 설계 v1.1 이 구현의 기준이다 |
 
 | Phase 2 — 도메인 계약 | `docs/10-domain-model.md` 설계 완료, 승인 대기 |
 
-## Phase 2 — 도메인 계약·데이터 모델
+## Phase 2 — 도메인 계약·데이터 모델 (완료)
 
 | 항목 | 내용 |
 | --- | --- |
-| 목표 | 핵심 엔티티/값 객체/불변식을 스키마와 문서로 확정 |
-| 선행 | Phase 1 승인 |
-| 산출물 | `contracts/schemas/domain/*.json`, ERD(`docs/10-domain-model.md`), `db/migrations/0001_init.sql` |
-| 테스트 | 스키마 valid/invalid 예제, 제약(필수/길이/열거) 커버리지, 빈 DB 마이그레이션 적용 |
-| 완료 조건 | 모든 엔티티에 스키마+예제+문서, `npm run check` 통과, 마이그레이션 재현 |
-| 상태 | 설계 검토 중 |
+| 산출물 | `docs/10-domain-model.md` v1.1, 도메인 스키마 7종 + 예제, `db/migrations/0001_init.sql`, OpenAPI 0.2.0 |
+| 완료 조건 | 스키마/예제 커버리지 + OpenAPI 유효 + 타입 검사 통과 |
+| 상태 | **완료** (DB 실행 검증은 ENV-01) |
+
+## Phase 2b — PostgreSQL 어댑터 (대기)
+
+| 항목 | 내용 |
+| --- | --- |
+| 목표 | `Store` 포트의 PostgreSQL 구현 + 마이그레이션 실행 검증 |
+| 선행 | Docker/PostgreSQL 환경 (ENV-01) |
+| 산출물 | `apps/api/src/adapters/postgres/store.ts`, `tests/db/*.test.ts` |
+| 완료 조건 | 빈 DB 에 마이그레이션 적용 + `npm run test:db` 통과 (메모리와 동일 시나리오) |
+| 상태 | **ENV-PENDING** |
+
+## Phase 2c — 서버 런타임 (완료)
+
+| 항목 | 내용 |
+| --- | --- |
+| 산출물 | `apps/api/src` (도메인·유스케이스·HTTP), Fake Device/Mobile, 통합 테스트 5건 |
+| 완료 조건 | `npm run check` 통과 (17 tests) |
+| 상태 | **완료** — 근거: `docs/07-verification-log.md` |
+| 비고 | 분석은 동기 실행(ADR-0004), 저장소는 메모리(ADR-0005) |
 
 ## Phase 3 — 도메인 코어 + 영속 어댑터
 
@@ -68,9 +84,9 @@ flowchart LR
 | 목표 | 순수 도메인 로직과 저장소 구현 |
 | 선행 | Phase 2, 스택 확정(OPEN-002) |
 | 산출물 | L1 도메인 패키지, L2 유스케이스, L3 영속 어댑터, 마이그레이션 |
-| 테스트 | 도메인 단위 테스트(불변식/상태 전이), 저장소 통합 테스트(컨테이너) |
-| 완료 조건 | 핵심 유스케이스가 저장소 통합 테스트로 통과, 커버리지 목표 합의 |
-| 상태 | TODO |
+| 테스트 | 도메인 단위 테스트(불변식/상태 전이), 저장소 통합 테스트 |
+| 완료 조건 | 핵심 유스케이스가 저장소 통합 테스트로 통과 |
+| 상태 | **부분 완료** — 메모리 어댑터로 검증, PostgreSQL 어댑터는 Phase 2b(ENV-PENDING) |
 
 ## Phase 4 — API 엣지
 
@@ -79,9 +95,9 @@ flowchart LR
 | 목표 | OpenAPI 계약과 구현의 일치 |
 | 선행 | Phase 3 |
 | 산출물 | L4 HTTP 서버, 요청 검증, problem+json 매핑, `/healthz`, `/api/v1/info` |
-| 테스트 | 계약 테스트(응답이 스키마 통과), 오류 경로 테스트(400/404/409/422/500) |
+| 테스트 | 계약 테스트(응답이 스키마 통과), 오류 경로 테스트(401/404/409/422) |
 | 완료 조건 | 모든 엔드포인트 계약 테스트 통과 + OpenAPI 와 diff 없음 |
-| 상태 | TODO |
+| 상태 | **완료** — 12개 오퍼레이션, 실데이터 계약 테스트 통과 |
 
 ## Phase 5 — 하드웨어 어댑터 (가짜/시뮬레이터)
 
@@ -90,9 +106,9 @@ flowchart LR
 | 목표 | 실물 없이 하드웨어 의존 흐름 전체 검증 |
 | 선행 | OPEN-003, Phase 4 |
 | 산출물 | `DevicePort` 구현 3종 중 fake/simulated, 장애 주입(지연/단절/오류) |
-| 테스트 | 타임아웃·재시도·서킷브레이커, 단절 시 503 및 `healthz` 반영 |
+| 테스트 | BLE/HTTP 중단·재개, 세션 만료 후 재전송 |
 | 완료 조건 | 실물 없이 E2E 시나리오 통과 |
-| 상태 | TODO |
+| 상태 | **완료(Fake)** — 실물 어댑터는 Phase 7 `HW-PENDING` |
 
 ## Phase 6 — MVP 통합
 
@@ -103,7 +119,7 @@ flowchart LR
 | 산출물 | 데모 시나리오, 운영 문서, 릴리스 체크리스트, 백업/복구 절차 |
 | 테스트 | 수용 테스트(스펙 기준), 부하/지연 목표 확인 |
 | 완료 조건 | 스펙의 MVP 수용 기준 전부 통과 |
-| 상태 | TODO |
+| 상태 | **WIP** — 서버 API 완료, 웹 대시보드·iOS 앱 미착수 |
 
 ## Phase 7 — 실물 하드웨어 검증
 

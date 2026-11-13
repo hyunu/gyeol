@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: gyeol-postgres
+    environment:
+      POSTGRES_USER: gyeol
+      POSTGRES_PASSWORD: gyeol
+      POSTGRES_DB: gyeol
+    ports:
+      - "5433:5432"
+    volumes:
+      - gyeol-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gyeol -d gyeol"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  gyeol-pgdata:

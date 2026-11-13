@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/conversation-summary.json",
+  "title": "ConversationSummary",
+  "description": "목록/검색용 대화 요약. 상세는 ConversationDetail.",
+  "type": "object",
+  "required": [
+    "id", "title", "summary", "language", "startedAt", "endedAt",
+    "status", "analysisVersion", "people", "recordingIds", "createdAt"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "title": { "type": ["string", "null"], "maxLength": 200 },
+    "summary": { "type": ["string", "null"] },
+    "language": { "type": "string", "minLength": 2 },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "endedAt": { "type": "string", "format": "date-time" },
+    "status": { "type": "string", "enum": ["ready", "partial"] },
+    "analysisVersion": { "type": "integer", "minimum": 1 },
+    "people": {
+      "type": "array",
+      "description": "식별된 참여자만 포함한다. Unknown Speaker 는 제외된다.",
+      "items": {
+        "type": "object",
+        "required": ["id", "displayName"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "displayName": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "recordingIds": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" }
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

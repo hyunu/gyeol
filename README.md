@@ -1,61 +1,100 @@
-# GYEOL (가칭)
+# GYEOL
 
-추모/기념 프로젝트. 현재 **Phase 0(기반 구축)** 완료, **Phase 1(스펙 확정) 대기** 상태다.
+웨어러블이 주변 대화를 VAD 로 감지해 녹음하고, iPhone 이 BLE 로 받아 AI 분석한 뒤,
+서버에서 날짜·인물·검색으로 다시 찾아보는 서비스.
 
-> 최상위 기준 문서 `MEMORIAL_PROJECT_SPEC.md` 는 아직 **초안(자리표시자)** 이다.
-> 원본 스펙을 확보하면 교체하고 개발을 재개한다.
-
-## 빠른 시작
-
-```bash
-make install   # 의존성 설치
-make check     # 계약 검증 + 테스트
-npm start      # API 실행 (http://127.0.0.1:8080)
-npm run contract-test   # 실행 중인 서버를 OpenAPI 와 대조
-```
-
-요구사항: Node.js 20+ (계약 검증 도구용)
+- 최상위 기준 문서: [`MEMORIAL_PROJECT_SPEC.md`](MEMORIAL_PROJECT_SPEC.md) v1.0
+- 도메인 설계: [`docs/10-domain-model.md`](docs/10-domain-model.md) v1.1 (승인 완료)
+- 검증 기록: [`docs/07-verification-log.md`](docs/07-verification-log.md)
 
 ## 현재 상태
 
 | 영역 | 상태 |
 | --- | --- |
-| 저장소 분석 | 완료 — `docs/00-repository-analysis.md` |
-| 요구사항 기준선 | 완료 — `docs/01-requirements.md` |
-| 아키텍처(잠정) | 완료 — `docs/02-architecture.md` |
-| 폴더 구조(잠정) | 완료 — `docs/03-folder-structure.md` |
-| 개발 계획 | 완료 — `docs/04-development-plan.md` |
-| API 규약 | 완료 — `docs/05-api-conventions.md` |
-| 공통 계약 | 완료 — `contracts/` (스키마 3 · OpenAPI) |
-| 계약 검증 파이프라인 | 완료 — CI + `npm run check` |
-| 워킹 스켈레톤 API | 완료 — `apps/api/` (`/healthz`, `/api/v1/info`) + 계약 테스트 |
-| Phase 1 스펙 | 확정 — `MEMORIAL_PROJECT_SPEC.md` v1.0 |
-| Phase 1 요구사항 | 완료 — `docs/06-phase1-requirements.md` |
-| 도메인 모델·ERD | **검토 대기** — `docs/10-domain-model.md` |
-| 마이그레이션·도메인 코드 | 승인 후 착수 |
-| 하드웨어 | 미착수 — `HW-PENDING` |
+| 스펙·요구사항 | 완료 |
+| 도메인 모델·ERD·상태 전이 | 완료 (M-01~M-04 반영) |
+| OpenAPI 계약 + 스키마 10종 | 완료 (12 오퍼레이션) |
+| Recording / Conversation API | 완료 (메모리 저장소) |
+| Fake Hardware / Fake Mobile | 완료 |
+| 통합·계약 테스트 | 완료 — 17 tests |
+| PostgreSQL 마이그레이션 작성 | 완료 |
+| PostgreSQL 실행 검증·어댑터 | **ENV-PENDING** (DB 환경 없음) |
+| 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
+
+## 빠른 시작
+
+```bash
+npm install
+npm run check      # 계약 + 타입 + 테스트 (17 tests)
+npm start          # http://127.0.0.1:8080
+```
+
+로컬 개발은 임시 인증 헤더를 쓴다(ADR-0003).
+
+```bash
+curl -s localhost:8080/healthz | jq
+curl -s -H 'x-user-id: 0199aaaa-0000-7000-8000-000000000001' \
+  -H 'content-type: application/json' \
+  -d '{"serialNo":"GYL-0001","model":"xiao-nrf52840-sense"}' \
+  localhost:8080/api/v1/devices | jq
+```
+
+실행 중인 서버를 계약과 대조:
+
+```bash
+npm run contract-test
+```
+
+## API 요약
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/healthz` | 상태(하드웨어는 `skipped`) |
+| POST/GET | `/api/v1/devices` | 기기 등록·목록 |
+| GET | `/api/v1/devices/{id}` | 기기 단건 |
+| POST/GET | `/api/v1/recordings` | 녹음 등록(멱등)·목록 |
+| GET/DELETE | `/api/v1/recordings/{id}` | 단건·원본 삭제(M-04 5조건) |
+| POST | `/api/v1/recordings/{id}/upload-sessions` | 재전송 세션 발급 |
+| PUT | `/api/v1/recordings/{id}/upload-sessions/{sid}/chunks?offset=` | 청크 업로드(재개) |
+| POST | `/api/v1/recordings/{id}/ack` | 클라이언트 최종 ACK |
+| POST | `/api/v1/recordings/{id}/analyze` | AI 분석(재분석 가능) |
+| GET | `/api/v1/conversations` | 날짜·인물·검색(q) |
+| GET | `/api/v1/conversations/{id}` | 상세(세그먼트·화자·엔티티·할 일) |
+| GET | `/api/v1/persons` | 인물 목록 |
+| PATCH | `/api/v1/action-items/{id}` | 할 일 상태 |
+
+전체 계약: [`contracts/openapi/openapi.yaml`](contracts/openapi/openapi.yaml)
 
 ## 구조
 
 ```
-docs/        설계·분석·계획 문서 (여기서 먼저 결정한다)
-contracts/   언어 중립 계약: JSON Schema + OpenAPI + 예제
-tools/       계약 검증기와 테스트
+apps/api/src    도메인 규칙 · 유스케이스 · HTTP (프레임워크 없음)
+packages/       하드웨어 포트, Fake 기기, Fake 폰
+contracts/      JSON Schema + OpenAPI (코드보다 먼저 존재)
+db/migrations/  PostgreSQL 스키마
+tests/          단위 + 전 구간 통합
+docs/           분석·요구사항·설계·검증 기록, ADR
 ```
 
-## 개발 원칙
+## 설계 핵심
 
-1. 계약 우선 — 스키마/API 계약이 코드보다 먼저다. (`docs/adr/0001-contract-first.md`)
-2. 하드웨어는 포트/어댑터 뒤에 격리한다.
-3. 실물 하드웨어 검증 전에는 어떤 항목도 "완료"로 표기하지 않는다. → `HW-PENDING`
-4. 모든 작업은 테스트와 문서 갱신을 동반한다.
-5. 기존 자산은 삭제·전면 교체하지 않는다.
+1. **원본/파생 분리** — `recordings`(+오브젝트) vs `conversations` 이하. 재분석은 파생만 교체.
+2. **M-04 삭제 5조건** — 크기·SHA-256·스토리지 저장·DB 기록·클라이언트 ACK 전에는 삭제 불가.
+3. **이어받기** — 업로드 세션 오프셋. 세션 만료는 녹음 삭제가 아니다.
+4. **Unknown Speaker** — 임계값/격차 미달 시 `person_id=NULL`, person 행 생성 안 함.
+5. **하드웨어 격리** — `HardwareAdapter`/`AiPipeline` 포트. 실물 없이 전 구간 검증.
+6. **계약 우선** — OpenAPI/스키마가 CI 에서 강제된다.
 
-## 다음 할 일
+## 알려진 제한 (의도된 현재 상태)
 
-- [ ] `docs/10-domain-model.md` §11 승인 (D-03, 1:1, `stored` 시점, `speaker_clusters`, TBD 기본값)
-- [ ] PostgreSQL 마이그레이션 `0001_init.sql`
-- [ ] OpenAPI 확장 (Recording / Conversation)
-- [ ] 도메인 코어 + 유스케이스
-- [ ] Fake Hardware / Fake Mobile + 통합 테스트
-- [ ] 실제 하드웨어·iPhone 연결 (`HW-PENDING`)
+- 저장소가 **메모리**다. 재시작하면 데이터가 사라진다(ADR-0005). 운영 배포 금지.
+- 분석이 **요청 내 동기 실행**이다(ADR-0004). 실제 AI 도입 시 작업 큐 필요.
+- `X-User-Id` 는 **로컬 전용**이며 `GYEOL_ENV != local` 이면 401(ADR-0003).
+- DB 마이그레이션은 작성만 됐고 실제 적용 검증은 안 됐다(`db/README.md`).
+
+## 다음 단계
+
+1. PostgreSQL 어댑터 + 마이그레이션 실행 검증 (`make db-up && make db-migrate && npm run test:db`)
+2. 웹 대시보드 (타임라인·인물·검색)
+3. 실제 AI provider 어댑터
+4. 실물 웨어러블 + iOS BLE 연동 (`HW-PENDING`)

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/action-item.json",
+  "title": "ActionItem",
+  "description": "대화에서 추출된 할 일. 상태는 open → done|dismissed, 되돌리기 가능.",
+  "type": "object",
+  "required": ["id", "conversationId", "title", "status", "createdAt", "updatedAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "conversationId": { "type": "string", "format": "uuid" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "dueAt": { "type": ["string", "null"], "format": "date-time" },
+    "status": { "type": "string", "enum": ["open", "done", "dismissed"] },
+    "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": false
+}

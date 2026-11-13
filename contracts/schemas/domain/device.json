@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/device.json",
+  "title": "Device",
+  "description": "웨어러블 기기. online 은 last_seen_at + TTL 로 파생된 값이며 저장하지 않는다.",
+  "type": "object",
+  "required": ["id", "serialNo", "model", "lifecycleStatus", "online", "createdAt", "updatedAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "userId": { "type": ["string", "null"], "format": "uuid" },
+    "serialNo": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "model": { "type": "string", "minLength": 1 },
+    "hardwareRevision": { "type": ["string", "null"] },
+    "firmwareVersion": { "type": ["string", "null"] },
+    "lifecycleStatus": {
+      "type": "string",
+      "enum": ["provisioned", "active", "retired"]
+    },
+    "online": { "type": "boolean" },
+    "lastSeenAt": { "type": ["string", "null"], "format": "date-time" },
+    "batteryPct": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+    "storageFreeBytes": { "type": ["integer", "null"], "minimum": 0 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

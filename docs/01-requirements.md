@@ -15,6 +15,7 @@
 | `DONE` | 완료 (테스트 근거 있음) |
 | `DONE(잠정)` | 산출물은 존재하나 기준 문서 확정 시 재검토 필요 |
 | `HW-PENDING` | 소프트웨어 완료, **실물 하드웨어 검증 대기** (완료로 표시 금지) |
+| `ENV-PENDING` | 코드/문서 완료, **실행 환경(DB 등) 확보 후 검증 대기** |
 | `BLOCKED` | 선행 입력/결정 부족으로 착수 불가 |
 | `N/A` | 대상 없음 |
 
@@ -101,7 +102,18 @@
 
 | ID | 항목 | 소프트웨어 상태 | 필요한 실물 검증 | 상태 |
 | --- | --- | --- | --- | --- |
-| (없음) | — | — | — | — |
+| HW-01 | VAD 구간 검출·전후 버퍼 | Fake 는 WAV 생성만 | PDM 마이크 입력에서 오탐/미탐, 버퍼 길이 | `HW-PENDING` |
+| HW-02 | microSD 독립 저장 | Fake 메모리 저장 | 전원 차단 후 파일 무결성, 8GB 순환 정책 | `HW-PENDING` |
+| HW-03 | BLE 파일 전송(ACK/재전송/이어받기) | Fake 시뮬레이션 통과 | 실기 MTU·처리량·재연결 시간 | `HW-PENDING` |
+| HW-04 | 배터리·발열 | 없음 | 500mAh 로 예상 사용 시간 | `HW-PENDING` |
+| HW-05 | iOS CoreBluetooth/AVFoundation 연동 | Fake Phone 통과 | 실기기 백그라운드 전송 | `HW-PENDING` |
+
+### 5.1 ENV-PENDING (실행 환경 대기)
+
+| ID | 항목 | 사유 | 준비된 검증 |
+| --- | --- | --- | --- |
+| ENV-01 | PostgreSQL 마이그레이션 적용 | Docker/PostgreSQL 부재 | `make db-up && make db-migrate` |
+| ENV-02 | PostgreSQL `Store` 어댑터 | ENV-01 선행 | `npm run test:db` |
 
 > 규칙: 실물 하드웨어에서만 확인 가능한 동작(타이밍, 물리 센서 값, 전원/통신 안정성 등)은
 > `DONE`으로 표시하지 않고 이 표에 등록한다. 소프트웨어 측 근거(단위 테스트, 가짜 어댑터

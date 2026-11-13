@@ -1,0 +1,15 @@
+{
+  "id": "0199aaaa-0000-7000-8000-000000000101",
+  "userId": "0199aaaa-0000-7000-8000-000000000001",
+  "serialNo": "GYL-2026-0001",
+  "model": "xiao-nrf52840-sense",
+  "hardwareRevision": "rev-a",
+  "firmwareVersion": "0.1.0",
+  "lifecycleStatus": "active",
+  "online": true,
+  "lastSeenAt": "2026-11-13T07:00:00Z",
+  "batteryPct": 87,
+  "storageFreeBytes": 6612345344,
+  "createdAt": "2026-11-13T06:00:00Z",
+  "updatedAt": "2026-11-13T07:00:00Z"
+}

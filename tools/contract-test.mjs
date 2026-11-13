@@ -40,7 +40,8 @@ export async function runContractTests(baseUrl, { contract } = {}) {
     if (!op) continue;
 
     const name = op.operationId ?? rawPath;
-    if (op["x-gyeol-skip-contract-test"]) {
+    if (op["x-gyeol-skip-contract-test"] || rawPath.includes("{")) {
+      // 경로 파라미터가 필요한 오퍼레이션은 시나리오 테스트에서 검증한다.
       tested.push({ name, skipped: true });
       continue;
     }
@@ -48,7 +49,14 @@ export async function runContractTests(baseUrl, { contract } = {}) {
     const url = new URL(rawPath, baseUrl).toString();
     let res;
     try {
-      res = await fetch(url, { method: "GET", headers: { accept: "application/json" } });
+      res = await fetch(url, {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          // 로컬 전용 임시 인증 (ADR-0003). 운영 환경에는 이 하네스를 쓰지 않는다.
+          "x-user-id": process.env.GYEOL_USER_ID ?? "0199aaaa-0000-7000-8000-000000000001",
+        },
+      });
     } catch (err) {
       failures.push(`${name}: 요청 실패 — ${err.message}`);
       continue;

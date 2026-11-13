@@ -1,22 +1,31 @@
 {
   "name": "gyeol",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "GYEOL (가칭) — 추모/기념 프로젝트. 계약 우선(contract-first) 기반 저장소.",
+  "description": "GYEOL — 웨어러블 대화 기억 서비스. 계약 우선(contract-first) 기반 모노레포.",
   "type": "module",
   "scripts": {
     "start": "node apps/api/server.mjs",
-    "test": "node --test tools/test/*.test.mjs",
+    "test": "node --test tools/test/*.test.mjs tests/*.test.ts tests/unit/*.test.ts",
+    "test:db": "GYEOL_STORE=postgres node --test tests/db/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json",
     "validate": "node tools/validate-contracts.mjs",
     "contract-test": "node tools/contract-test.mjs",
-    "check": "npm run validate && npm test"
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "check": "npm run validate && npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "^10.1.0",
+    "@types/node": "^22.19.1",
+    "@types/pg": "^8.15.6",
     "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1"
+    "ajv-formats": "^3.0.1",
+    "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   }
 }

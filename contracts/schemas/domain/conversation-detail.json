@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/conversation-detail.json",
+  "title": "ConversationDetail",
+  "description": "대화 상세. 화자 클러스터·세그먼트·추출 정보·할 일을 포함한다.",
+  "type": "object",
+  "required": [
+    "id", "title", "summary", "language", "startedAt", "endedAt",
+    "status", "analysisVersion", "people", "recordingIds", "createdAt",
+    "speakers", "segments", "entities", "actionItems"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "title": { "type": ["string", "null"], "maxLength": 200 },
+    "summary": { "type": ["string", "null"] },
+    "language": { "type": "string", "minLength": 2 },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "endedAt": { "type": "string", "format": "date-time" },
+    "status": { "type": "string", "enum": ["ready", "partial"] },
+    "analysisVersion": { "type": "integer", "minimum": 1 },
+    "people": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "displayName"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "displayName": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "recordingIds": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+    "speakers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "personId", "displayName", "identificationStatus"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "label": { "type": "string", "minLength": 1 },
+          "personId": { "type": ["string", "null"], "format": "uuid" },
+          "displayName": { "type": ["string", "null"] },
+          "identificationStatus": {
+            "type": "string",
+            "enum": ["unknown", "suggested", "confirmed"]
+          },
+          "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "seq", "startMs", "endMs", "text", "speakerClusterId"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "seq": { "type": "integer", "minimum": 0 },
+          "startMs": { "type": "integer", "minimum": 0 },
+          "endMs": { "type": "integer", "minimum": 1 },
+          "text": { "type": "string" },
+          "speakerClusterId": { "type": ["string", "null"], "format": "uuid" },
+          "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "value"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "kind": {
+            "type": "string",
+            "enum": ["person", "place", "event", "appointment", "task", "other"]
+          },
+          "value": { "type": "string", "minLength": 1 },
+          "normalizedValue": { "type": ["string", "null"] },
+          "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "actionItems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "dueAt": { "type": ["string", "null"], "format": "date-time" },
+          "status": { "type": "string", "enum": ["open", "done", "dismissed"] },
+          "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

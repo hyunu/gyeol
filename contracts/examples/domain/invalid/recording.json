@@ -1,0 +1,18 @@
+{
+  "id": "0199aaaa-0000-7000-8000-000000000201",
+  "deviceId": "0199aaaa-0000-7000-8000-000000000101",
+  "clientRecordingId": "dev-0001:seq-42",
+  "status": "stored",
+  "startedAt": "2026-11-13T06:55:00Z",
+  "endedAt": "2026-11-13T06:55:12Z",
+  "durationMs": 12000,
+  "codec": "wav_pcm_s16le",
+  "sampleRateHz": 16000,
+  "channels": 1,
+  "byteSize": 0,
+  "sha256": "NOT-A-SHA256",
+  "audioAvailable": true,
+  "deletable": true,
+  "createdAt": "2026-11-13T06:55:30Z",
+  "updatedAt": "2026-11-13T06:57:00Z"
+}

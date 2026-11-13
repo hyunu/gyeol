@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/recording.json",
+  "title": "Recording",
+  "description": "원본 녹음(원본 계층). deletable 은 M-04 의 5개 조건이 모두 충족될 때만 true 다.",
+  "type": "object",
+  "required": [
+    "id", "deviceId", "clientRecordingId", "status", "startedAt", "endedAt",
+    "durationMs", "codec", "sampleRateHz", "channels", "byteSize", "sha256",
+    "audioAvailable", "deletable", "createdAt", "updatedAt"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "deviceId": { "type": "string", "format": "uuid" },
+    "clientRecordingId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "status": {
+      "type": "string",
+      "enum": [
+        "initiated", "uploading", "stored", "analyzing",
+        "analyzed", "analysis_failed", "integrity_failed", "purged"
+      ]
+    },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "endedAt": { "type": "string", "format": "date-time" },
+    "durationMs": { "type": "integer", "minimum": 1 },
+    "codec": {
+      "type": "string",
+      "minLength": 1,
+      "description": "D-04 미확정. wav_pcm_s16le / adpcm_ima_wav / opus_ogg 등 자유 문자열."
+    },
+    "codecParams": { "type": ["object", "null"] },
+    "sampleRateHz": { "type": "integer", "minimum": 1 },
+    "channels": { "type": "integer", "minimum": 1 },
+    "byteSize": { "type": "integer", "minimum": 1 },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "audioAvailable": {
+      "type": "boolean",
+      "description": "Object Storage 에서 원본을 내려받을 수 있는지 여부. storageKey 는 노출하지 않는다."
+    },
+    "deletable": {
+      "type": "boolean",
+      "description": "M-04: 크기·SHA-256·스토리지 저장·DB 기록·클라이언트 ACK 모두 충족 시 true"
+    },
+    "integrityVerifiedAt": { "type": ["string", "null"], "format": "date-time" },
+    "storageVerifiedAt": { "type": ["string", "null"], "format": "date-time" },
+    "clientAckAt": { "type": ["string", "null"], "format": "date-time" },
+    "analyzedAt": { "type": ["string", "null"], "format": "date-time" },
+    "purgedAt": { "type": ["string", "null"], "format": "date-time" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

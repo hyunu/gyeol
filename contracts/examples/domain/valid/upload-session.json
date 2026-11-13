@@ -1,0 +1,12 @@
+{
+  "id": "0199aaaa-0000-7000-8000-000000000301",
+  "recordingId": "0199aaaa-0000-7000-8000-000000000201",
+  "status": "open",
+  "expectedBytes": 384000,
+  "receivedBytes": 131072,
+  "chunkSizeBytes": 262144,
+  "nextOffset": 131072,
+  "expiresAt": "2026-11-14T06:56:00Z",
+  "completedAt": null,
+  "createdAt": "2026-11-13T06:55:30Z"
+}
