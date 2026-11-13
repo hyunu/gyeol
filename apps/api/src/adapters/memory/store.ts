@@ -8,6 +8,7 @@ import type {
   Device,
   Person,
   Recording,
+  Session,
   SpeakerCluster,
   TranscriptSegment,
   ExtractedEntity,
@@ -54,12 +55,34 @@ export class MemoryStore implements Store {
   private embeddings = new Map<string, { provider: string; model: string; dim: number; vector: number[] }>();
   private links: Link[] = [];
   private analysisJobs = new Map<string, AnalysisJob>();
+  private authSessions = new Map<string, Session>();
+  private authSubjects = new Map<string, string>();
 
   ensureUser(id: string): Promise<User> {
     const existing = this.users.get(id);
     if (existing) return Promise.resolve(clone(existing));
     const user: User = { id, displayName: `로컬 사용자 ${id.slice(0, 8)}`, createdAt: new Date() };
     this.users.set(id, user);
+    return Promise.resolve(clone(user));
+  }
+
+  upsertUserByAuthSubject(input: {
+    id: string;
+    authSubject: string;
+    displayName: string;
+  }): Promise<User> {
+    const existingId = this.authSubjects.get(input.authSubject);
+    if (existingId) {
+      const existing = this.users.get(existingId);
+      if (existing) return Promise.resolve(clone(existing));
+    }
+    const user: User = {
+      id: input.id,
+      displayName: input.displayName,
+      createdAt: new Date(),
+    };
+    this.users.set(user.id, user);
+    this.authSubjects.set(input.authSubject, user.id);
     return Promise.resolve(clone(user));
   }
 
@@ -495,6 +518,40 @@ export class MemoryStore implements Store {
     };
     this.analysisJobs.set(claimed.id, claimed);
     return clone(claimed);
+  }
+
+  // ---------------------------------------------------------------- sessions
+  createSession(session: Session): Promise<Session> {
+    this.authSessions.set(session.id, clone(session));
+    return Promise.resolve(clone(session));
+  }
+
+  findSessionByTokenHash(tokenHash: string): Promise<Session | null> {
+    const found = [...this.authSessions.values()].find((session) => session.tokenHash === tokenHash);
+    return Promise.resolve(found ? clone(found) : null);
+  }
+
+  touchSession(id: string, at: Date): Promise<void> {
+    const session = this.authSessions.get(id);
+    if (session) this.authSessions.set(id, { ...session, lastUsedAt: at });
+    return Promise.resolve();
+  }
+
+  revokeSession(id: string, at: Date): Promise<void> {
+    const session = this.authSessions.get(id);
+    if (session) this.authSessions.set(id, { ...session, revokedAt: at });
+    return Promise.resolve();
+  }
+
+  revokeUserSessions(userId: string, at: Date): Promise<number> {
+    let count = 0;
+    for (const [id, session] of this.authSessions) {
+      if (session.userId === userId && !session.revokedAt) {
+        this.authSessions.set(id, { ...session, revokedAt: at });
+        count += 1;
+      }
+    }
+    return Promise.resolve(count);
   }
 }
 

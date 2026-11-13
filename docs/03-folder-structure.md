@@ -20,7 +20,8 @@ gyeol/
 │       │   ├── postgres/store.ts   # PostgreSQL 구현 (ADR-0005)
 │       │   ├── storage/local-disk.ts
 │       │   ├── storage/s3.ts       # S3 호환 (ADR-0008)
-│       │   └── ai/fake-pipeline.ts
+│       │   ├── ai/fake-pipeline.ts
+│       │   └── identity/apple.ts   # Apple JWKS 검증 (ADR-0010)
 │       └── http/                   # L4: 라우팅·검증·problem+json·DTO
 ├── apps/web/                       # React 대시보드 (계약 타입 생성, Vite)
 │   ├── src/api/schema.ts           # OpenAPI 에서 생성 (커밋)
@@ -38,6 +39,7 @@ gyeol/
 ├── db/
 │   ├── migrations/0001_init.sql    # 14개 테이블
 │   ├── migrations/0002_analysis_jobs.sql  # 비동기 분석 작업 큐 (ADR-0007)
+│   ├── migrations/0003_sessions.sql       # Apple 세션 (ADR-0010)
 │   ├── checks/*.sql                # 제약 실동작 검증
 │   └── README.md
 ├── deploy/docker-compose.yml       # pgvector·MinIO 로컬 서비스
@@ -49,6 +51,7 @@ gyeol/
 ├── tests/
 │   ├── integration.test.ts         # 전 구간 시나리오
 │   ├── async-analysis.test.ts      # 작업 큐·재시도·타임아웃·임차 회수
+│   ├── auth.test.ts                # 세션·소유자 스코프
 │   ├── e2e/                        # Playwright 검색·상세·모바일
 │   ├── db/                         # PostgreSQL 패리티·작업 큐
 │   ├── s3/                         # S3 어댑터·전 구간

@@ -10,6 +10,7 @@ import type {
   ExtractedEntity,
   Person,
   Recording,
+  Session,
   SpeakerCluster,
   TranscriptSegment,
   UploadSession,
@@ -97,6 +98,20 @@ export class PostgresStore implements Store {
     const { rows } = await this.pool.query(
       `SELECT id, display_name, created_at FROM users WHERE id = $1`,
       [id],
+    );
+    return mapUser(rows[0]);
+  }
+
+  async upsertUserByAuthSubject(input: {
+    id: string;
+    authSubject: string;
+    displayName: string;
+  }): Promise<User> {
+    const { rows } = await this.pool.query(
+      `INSERT INTO users (id, auth_subject, display_name) VALUES ($1, $2, $3)
+       ON CONFLICT (auth_subject) DO UPDATE SET updated_at = now()
+       RETURNING id, display_name, created_at`,
+      [input.id, input.authSubject, input.displayName],
     );
     return mapUser(rows[0]);
   }
@@ -861,6 +876,55 @@ export class PostgresStore implements Store {
       return rows[0] ? mapAnalysisJob(rows[0]) : null;
     });
   }
+
+  // ---------------------------------------------------------------- sessions
+  async createSession(session: Session): Promise<Session> {
+    const { rows } = await this.pool.query(
+      `INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at,
+         last_used_at, revoked_at, user_agent)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING *`,
+      [
+        session.id,
+        session.userId,
+        session.tokenHash,
+        session.createdAt,
+        session.expiresAt,
+        session.lastUsedAt,
+        session.revokedAt,
+        session.userAgent,
+      ],
+    );
+    return mapSession(rows[0]);
+  }
+
+  async findSessionByTokenHash(tokenHash: string): Promise<Session | null> {
+    const { rows } = await this.pool.query(
+      `SELECT * FROM sessions WHERE token_hash = $1`,
+      [tokenHash],
+    );
+    return rows[0] ? mapSession(rows[0]) : null;
+  }
+
+  async touchSession(id: string, at: Date): Promise<void> {
+    await this.pool.query(`UPDATE sessions SET last_used_at = $2 WHERE id = $1`, [id, at]);
+  }
+
+  async revokeSession(id: string, at: Date): Promise<void> {
+    await this.pool.query(
+      `UPDATE sessions SET revoked_at = COALESCE(revoked_at, $2) WHERE id = $1`,
+      [id, at],
+    );
+  }
+
+  async revokeUserSessions(userId: string, at: Date): Promise<number> {
+    const result = await this.pool.query(
+      `UPDATE sessions SET revoked_at = $2
+       WHERE user_id = $1 AND revoked_at IS NULL`,
+      [userId, at],
+    );
+    return result.rowCount ?? 0;
+  }
 }
 
 // ------------------------------------------------------------------ mapping
@@ -1019,6 +1083,19 @@ function mapActionItem(row: Row): ActionItem {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     completedAt: row.completed_at ?? null,
+  };
+}
+
+function mapSession(row: Row): Session {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    tokenHash: row.token_hash,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    lastUsedAt: row.last_used_at ?? null,
+    revokedAt: row.revoked_at ?? null,
+    userAgent: row.user_agent ?? null,
   };
 }
 

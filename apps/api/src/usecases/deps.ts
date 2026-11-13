@@ -1,3 +1,4 @@
+import type { IdentityVerifier } from "../ports/identity.ts";
 import type { AiPipeline, ObjectStorage, Store } from "../ports/store.ts";
 import type { SpeakerIdThreshold } from "../domain/types.ts";
 
@@ -20,6 +21,10 @@ export interface Deps {
     retryBaseMs: number;
     retryMaxMs: number;
   };
+  /** Apple identity token 검증기. 미설정이면 /auth/apple 이 503 이다. */
+  identity?: IdentityVerifier;
+  /** 세션 수명 (ADR-0010: 30일 절대 만료). */
+  auth: { sessionTtlMs: number };
 }
 
 export const defaultDeps = (partial: Partial<Deps> & Pick<Deps, "store" | "storage" | "ai">): Deps => ({
@@ -32,6 +37,7 @@ export const defaultDeps = (partial: Partial<Deps> & Pick<Deps, "store" | "stora
     retryBaseMs: 1000,
     retryMaxMs: 60 * 1000,
   },
+  auth: { sessionTtlMs: 30 * 24 * 60 * 60 * 1000 },
   ...partial,
 });
 

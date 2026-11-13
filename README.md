@@ -18,11 +18,12 @@
 | 비동기 분석 작업 큐 | 완료 (ADR-0007, 재시도·타임아웃·임차 회수) |
 | 웹 대시보드 (React) | 완료 — 타임라인·상세·인물 필터·키워드 검색 (`apps/web`) |
 | Fake Hardware / Fake Mobile | 완료 |
-| 통합·계약 테스트 | 완료 — 28 tests · E2E 6 tests |
+| 통합·계약 테스트 | 완료 — 34 tests · E2E 6 tests |
 | PostgreSQL 마이그레이션·제약 검증 | 완료 (15 테이블, `npm run db:checks`) |
 | PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
 | 오브젝트 스토리지 | 완료 — 로컬 디스크 + S3/MinIO (`GYEOL_STORAGE`), `test:s3` 7 tests |
 | 관측성 | 완료 — 요청 JSON 로그, `X-Trace-Id`, `GET /metrics` (`docs/09-observability.md`) |
+| 세션 인증 | 완료(서버) — Apple JWKS, Bearer/쿠키 세션, 소유자 스코프. iOS/웹 로그인 UI는 대기 |
 | 백업/복구 | 완료 — `db:backup`·복구 리허설 통과 (`docs/11-backup-restore.md`) |
 | 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
 
@@ -30,7 +31,7 @@
 
 ```bash
 npm install
-npm run check      # 계약 + 타입 + 테스트 (28 tests)
+npm run check      # 계약 + 타입 + 테스트 (34 tests)
 npm start          # http://127.0.0.1:8080 (메모리 저장소)
 ```
 
@@ -131,6 +132,8 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 - 분석은 **비동기 작업 큐**다(ADR-0007). `POST .../analyze` 는 202 로 작업을 만들고,
   `GET /api/v1/analysis-jobs/{jobId}` 로 폴링한다. 워커는 API 프로세스 안에서 돈다.
 - `X-User-Id` 는 **로컬 전용**이며 `GYEOL_ENV != local` 이면 401(ADR-0003).
+- Apple 로그인 세션은 서버에 구현됐다(Bearer/쿠키). iOS·웹 로그인 UI 는 Apple 설정 후 연결한다.
+  `APPLE_CLIENT_IDS`(bundle/Service ID, 쉼표 구분)가 없으면 `/auth/apple` 은 503 이다.
 - 오브젝트 스토리지는 **로컬 디스크**가 기본이고 `GYEOL_STORAGE=s3` 로 S3/MinIO 를 쓴다.
   S3 경유 업로드는 커밋 시 전송량이 2배다(ADR-0008).
 

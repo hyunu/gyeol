@@ -21,6 +21,15 @@ export const notFound = (what: string) =>
 export const unauthorized = (detail = "인증 정보가 없습니다.") =>
   new AppError("UNAUTHORIZED", 401, "인증이 필요합니다.", detail);
 
+export const authNotConfigured = () =>
+  new AppError(
+    "AUTH_NOT_CONFIGURED",
+    503,
+    "인증이 구성되지 않았습니다.",
+    "APPLE_CLIENT_IDS 가 설정되지 않았습니다.",
+    true,
+  );
+
 export const conflict = (code: string, message: string, detail?: string) =>
   new AppError(code, 409, message, detail);
 

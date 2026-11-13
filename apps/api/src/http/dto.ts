@@ -6,7 +6,9 @@ import type {
   Device,
   Person,
   Recording,
+  Session,
   UploadSession,
+  User,
 } from "../domain/types.ts";
 import { isDeletable } from "../domain/recording.ts";
 import { isDeviceOnline } from "../domain/device.ts";
@@ -59,6 +61,18 @@ export function recordingDto(recording: Recording) {
     purgedAt: iso(recording.purgedAt),
     createdAt: recording.createdAt.toISOString(),
     updatedAt: recording.updatedAt.toISOString(),
+  };
+}
+
+export function sessionDto(issued: { token: string; session: Session; user: User }) {
+  return {
+    token: issued.token,
+    tokenType: "Bearer",
+    expiresAt: issued.session.expiresAt.toISOString(),
+    user: {
+      id: issued.user.id,
+      displayName: issued.user.displayName,
+    },
   };
 }
 

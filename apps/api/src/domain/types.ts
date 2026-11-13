@@ -172,6 +172,17 @@ export interface ConversationEmbedding {
  * `attempt` 는 워커가 클레임한 횟수다. `attempt < maxAttempts` 이면 재시도 여지가 있다.
  * `leaseExpiresAt` 은 워커가 살아 있는 동안의 임차 만료 시각이며, 지나면 다른 워커가 회수한다.
  */
+export interface Session {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  createdAt: Date;
+  expiresAt: Date;
+  lastUsedAt: Date | null;
+  revokedAt: Date | null;
+  userAgent: string | null;
+}
+
 export interface AnalysisJob {
   id: string;
   userId: string;

@@ -7,6 +7,7 @@ import type {
   Device,
   Person,
   Recording,
+  Session,
   SpeakerCluster,
   TranscriptSegment,
   ExtractedEntity,
@@ -95,6 +96,12 @@ export interface Store {
   ping?(): Promise<void>;
 
   ensureUser(id: string): Promise<User>;
+  /** Apple sub 로 사용자를 찾거나 만든다(ADR-0010). */
+  upsertUserByAuthSubject(input: {
+    id: string;
+    authSubject: string;
+    displayName: string;
+  }): Promise<User>;
 
   createDevice(device: Device): Promise<Device>;
   findDevice(id: string): Promise<Device | null>;
@@ -142,6 +149,12 @@ export interface Store {
 
   findActionItem(id: string): Promise<ActionItem | null>;
   updateActionItem(item: ActionItem): Promise<ActionItem>;
+
+  createSession(session: Session): Promise<Session>;
+  findSessionByTokenHash(tokenHash: string): Promise<Session | null>;
+  touchSession(id: string, at: Date): Promise<void>;
+  revokeSession(id: string, at: Date): Promise<void>;
+  revokeUserSessions(userId: string, at: Date): Promise<number>;
 }
 
 /** AI 파이프라인 포트. Provider Adapter 로 교체한다. */

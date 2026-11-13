@@ -1,0 +1,9 @@
+{
+  "token": "short",
+  "tokenType": "Basic",
+  "expiresAt": "2026-12-14T05:00:00Z",
+  "user": {
+    "id": "0199aaaa-0000-7000-8000-000000000001",
+    "displayName": ""
+  }
+}

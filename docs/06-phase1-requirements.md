@@ -39,7 +39,7 @@
 
 ## 3. Phase 1 완료 조건
 
-1. `npm run check` 통과 (계약 + 타입 + 단위/통합) — **충족 (28 tests)**
+1. `npm run check` 통과 (계약 + 타입 + 단위/통합) — **충족 (34 tests)**
 2. Fake Device → Fake Mobile → API → Fake AI → Conversation 조회/검색 전 구간 통과 — **충족**
 3. 전송 중단 → 재개 시나리오 통과 (바이트 무손실, 해시 일치) — **충족**
 4. `stored` 이전 삭제 요청이 거부되는 테스트 존재 — **충족**

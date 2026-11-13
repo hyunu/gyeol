@@ -1,6 +1,6 @@
 # ADR 0010 — 인증은 Apple 로그인 + 서버 세션으로 한다
 
-- 상태: **채택** (D-01)
+- 상태: **채택** (D-01) — 서버 세션 구현 완료(2026-11-14). iOS/웹 로그인 UI 는 Apple 설정 후
 - 날짜: 2026-11-14
 - 관련: W-12(설계), W-19(구현·강화), ADR-0003(임시 헤더), `users.auth_subject`
 
@@ -37,6 +37,14 @@
 3. 인증 미들웨어: Bearer/쿠키 → 세션 조회 → `userId` 주입. `X-User-Id` 는 local 외 거부.
 4. 소유자 스코프 테스트: 타 사용자의 기기·녹음·대화·작업 접근이 404/403 인지.
 5. 웹: 로그인 후 세션 쿠키 사용, 로그아웃. (계약 변경은 새 ADR/버전에서)
+
+## 구현 상태 (2026-11-14)
+
+- 완료: `0003_sessions.sql`, `POST /api/v1/auth/apple`, `POST /api/v1/auth/logout`,
+  Bearer/쿠키 세션 인증, Apple JWKS 검증기, 소유자 스코프 테스트
+- 남음: iOS `ASAuthorizationAppleIDProvider` 연동, 웹 로그인 UI(Service ID 필요),
+  토큰 보관(키체인), 로그인 화면
+- 검증: `tests/auth.test.ts` 6건, `tests/db/auth.test.ts` 3건
 
 ## 결과
 

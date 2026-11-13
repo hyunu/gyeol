@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/apple-sign-in-request.json",
+  "title": "AppleSignInRequest",
+  "description": "iOS/웹에서 받은 Apple identity token 으로 세션을 발급받는다(ADR-0010). 서버는 Apple JWKS 로 서명·iss·aud·nonce 를 검증한다.",
+  "type": "object",
+  "required": ["identityToken"],
+  "properties": {
+    "identityToken": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 10000,
+      "description": "ASAuthorizationAppleIDCredential.identityToken 을 UTF-8 문자열로 변환한 JWT."
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "클라이언트가 생성한 원문 nonce. 토큰에 nonce claim 이 있으면 SHA-256 일치를 확인한다."
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "최초 로그인에서만 받을 수 있는 이름. 없으면 이메일 앞부분 또는 '사용자'."
+    }
+  },
+  "additionalProperties": false
+}

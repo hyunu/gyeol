@@ -70,7 +70,7 @@ flowchart LR
 | 항목 | 내용 |
 | --- | --- |
 | 산출물 | `apps/api/src` (도메인·유스케이스·HTTP), Fake Device/Mobile, 통합 테스트 5건 |
-| 완료 조건 | `npm run check` 통과 (28 tests) |
+| 완료 조건 | `npm run check` 통과 (34 tests) |
 | 상태 | **완료** — 근거: `docs/07-verification-log.md` |
 | 비고 | 분석은 비동기 작업 큐(ADR-0007), 기본 저장소는 메모리(ADR-0005) |
 

@@ -32,6 +32,7 @@
 
 ```mermaid
 erDiagram
+    users ||--o{ sessions : "auth (ADR-0010)"
     users ||--o{ devices : "owns"
     users ||--o{ recordings : "owns"
     users ||--o{ persons : "owns"
@@ -74,7 +75,7 @@ erDiagram
 | 필드 | 타입 | NULL | 제약/기본 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | uuid | N | PK | UUIDv7 |
-| `auth_subject` | text | Y | UNIQUE | IdP subject. 인증 방식 TBD(D-01) |
+| `auth_subject` | text | Y | UNIQUE | IdP subject(`apple:<sub>`). ADR-0010 |
 | `email` | citext | Y | UNIQUE | 알림·연락용. 로그인 수단으로 단정하지 않음 |
 | `display_name` | text | N | length 1..80 | 표시 이름 |
 | `locale` | text | N | `'ko-KR'` | UI 언어 |
@@ -339,6 +340,22 @@ erDiagram
 - 선점은 `FOR UPDATE SKIP LOCKED` 로 원자적이다. 만료 임차는 회수한다.
 - `POST .../analyze` 는 작업을 만들기만 하고, 실행은 워커가 한다(ADR-0007).
 
+### 3.16 `sessions` (ADR-0010)
+
+| 필드 | 타입 | NULL | 제약/기본 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | uuid | N | PK | 세션 식별자 |
+| `user_id` | uuid | N | FK users CASCADE | 소유자 |
+| `token_hash` | char(64) | N | UNIQUE, hex CHECK | 토큰 SHA-256. 원문 저장 금지 |
+| `created_at` | timestamptz | N | `now()` | |
+| `expires_at` | timestamptz | N | CHECK > created_at | 절대 만료(30일) |
+| `last_used_at` | timestamptz | Y | | 5분에 한 번 갱신 |
+| `revoked_at` | timestamptz | Y | | 폐기 시각(행 유지) |
+| `user_agent` | text | Y | | 기기 식별 보조 |
+
+- `Bearer`(iOS)와 `gyeol_session` HttpOnly 쿠키(웹)가 같은 세션을 쓴다.
+- 사용자 삭제 시 CASCADE 로 함께 지운다.
+
 ---
 
 ## 4. 관계 요약
@@ -346,6 +363,7 @@ erDiagram
 | 관계 | 카디널리티 | 삭제 정책 |
 | --- | --- | --- |
 | users → devices | 1:N | SET NULL (기기는 이력 보존) |
+| users → sessions | 1:N | CASCADE (세션은 계정과 함께 폐기) |
 | users → recordings | 1:N | RESTRICT (계정 삭제는 purge 절차 후) |
 | users → persons | 1:N | CASCADE |
 | devices → recordings | 1:N | RESTRICT |
@@ -608,4 +626,4 @@ erDiagram
 | --- | --- | --- |
 | 1.0 | 2026-11-13 | 최초 설계안 |
 | 1.1 | 2026-11-13 | 승인 반영: M-01(연결 테이블), M-02(코덱 유연화), M-03(모델별 임계값), M-04(삭제 5조건) |
-| 1.2 | 2026-11-14 | `analysis_jobs`(§3.15, §6.8, ADR-0007), D-01·D-04·D-05·D-08·D-11 확정(ADR-0006·0009·0010·0011) |
+| 1.2 | 2026-11-14 | `analysis_jobs`(§3.15, §6.8, ADR-0007), `sessions`(§3.16, ADR-0010), D-01·D-04·D-05·D-08·D-11 확정(ADR-0006·0009·0010·0011) |

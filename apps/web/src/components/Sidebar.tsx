@@ -87,7 +87,7 @@ export function Sidebar({
       </section>
 
       <p className="sidebar__note">
-        로컬 임시 인증으로 연결되어 있습니다. Apple 로그인은 W-19에서 연결됩니다.
+        로컬 임시 인증으로 연결되어 있습니다. 서버 세션 인증은 준비됐고, 웹 로그인은 Apple Service ID 발급 후 연결합니다.
       </p>
     </aside>
   );

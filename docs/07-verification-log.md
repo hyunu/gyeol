@@ -2,7 +2,7 @@
 
 - 최종 실행: 2026-11-14
 - 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db` · `test:s3` · `test:e2e` · `web:build`
-- 결과: **28 tests / pass 28 / fail 0**, DB **14 / 14**, S3 **7 / 7**, E2E **6 / 6**,
+- 결과: **34 tests / pass 34 / fail 0**, DB **17 / 17**, S3 **7 / 7**, E2E **6 / 6**,
   계약 스키마 11 · 예제 17 · OpenAPI 유효, DB 마이그레이션(2건)·제약 검사 통과
 
 ## 1. 자동 검증 항목
@@ -169,6 +169,23 @@ Playwright 로 실제 브라우저에서 검색·상세·모바일 전환을 검
 
 > 로컬 Vite(5173)와 충돌하지 않도록 E2E 는 5273 을 쓰고 기존 서버를 재사용하지 않는다.
 
+## 2.8 Apple 세션 인증 (W-19 서버, 2026-11-14)
+
+| # | 검증 | 근거 | 결과 |
+| --- | --- | --- | --- |
+| 1 | Apple 로그인 → 세션 발급, Bearer 접근, 같은 sub 는 같은 사용자 | `tests/auth.test.ts` | 통과 |
+| 2 | 토큰 원문 미저장(해시만), 로그인마다 새 세션 | 동일 | 통과 |
+| 3 | 쿠키(`gyeol_session`) 인증, 로그아웃 후 즉시 401 | 동일 | 통과 |
+| 4 | 30일 만료, 잘못된 토큰 fail-closed(로컬 헤더로 미전환) | 동일 | 통과 |
+| 5 | Apple 검증 실패 401 / 검증기 미설정 503 | 동일 | 통과 |
+| 6 | 타 사용자의 기기·녹음·대화·할 일·분석 작업 404 | 동일 | 통과 |
+| 7 | 로컬 `X-User-Id` 유지 | 동일 | 통과 |
+| 8 | DB: auth_subject upsert, 세션 생명주기, token_hash 중복 거부 | `tests/db/auth.test.ts` | 통과 |
+| 9 | DB 제약: token_hash 형식·만료·FK·CASCADE | `db/checks/0003_sessions.sql` | 통과 |
+
+> 실제 Apple JWKS 토큰 검증은 App ID/Service ID 와 실제 identity token 이 필요해 아직 실행하지
+> 않았다(`ENV-09`). Fake verifier 로 서버 경로만 검증했다.
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |
@@ -181,6 +198,7 @@ Playwright 로 실제 브라우저에서 검색·상세·모바일 전환을 검
 | ENV-06 | 한국어 전문검색 토크나이저(D-07) | 미확정 | 검색 품질 측정 |
 | ENV-07 | pgvector 인덱스(HNSW) 튜닝 | 차원 확정(256/768), 모델·부하 미측정 | W-18 이후 부하 테스트 |
 | ENV-08 | 실제 S3/AWS(운영) | MinIO 로만 검증 | 운영 버킷·권한·수명주기 리허설 (W-26) |
+| ENV-09 | 실제 Apple identity token 검증 | App ID/Service ID·실기기 미연결 | Apple JWKS + 실제 토큰으로 로그인 E2E |
 
 ## 3.1 DB 검증 결과 (2026-11-14)
 

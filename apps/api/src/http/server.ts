@@ -11,10 +11,12 @@ import * as deviceUseCases from "../usecases/devices.ts";
 import * as recordingUseCases from "../usecases/recordings.ts";
 import * as conversationUseCases from "../usecases/conversations.ts";
 import * as analysisUseCases from "../usecases/analysis.ts";
+import * as authUseCases from "../usecases/auth.ts";
+import { createIdentityVerifierFromEnv } from "../adapters/identity/apple.ts";
 import { methodNotAllowed, notFound, validationFailed } from "../domain/errors.ts";
 import type { ActionItemStatus } from "../domain/types.ts";
 import type { ObjectStorage, Store } from "../ports/store.ts";
-import { DEMO_USER_ID, resolveUserId } from "./auth.ts";
+import { DEMO_USER_ID, resolveAuth } from "./auth.ts";
 import { sendEmpty, sendJson, sendProblem, sendText, readBinaryBody, readJsonBody } from "./respond.ts";
 import { consoleLogger, Metrics, type Logger, type LogEntry } from "../observability.ts";
 import * as dto from "./dto.ts";
@@ -40,6 +42,7 @@ interface Ctx {
   params: Record<string, string>;
   traceId: string;
   userId: string;
+  sessionId: string | null;
   deps: Deps;
 }
 
@@ -99,6 +102,7 @@ export function createApp(options: AppOptions = {}): http.Server {
       store: createStoreFromEnv(),
       storage: createStorageFromEnv(storageDir),
       ai: new FakeAiPipeline(),
+      identity: createIdentityVerifierFromEnv() ?? undefined,
     });
   const version = options.version ?? CONTRACT_VERSION;
   const metrics = new Metrics();
@@ -196,6 +200,24 @@ export function createApp(options: AppOptions = {}): http.Server {
       capabilities: ["devices", "recordings", "analysis-jobs", "conversations", "persons", "action-items"],
     },
   }));
+
+  // ------------------------------------------------------------------ auth
+  route("POST", "/api/v1/auth/apple", false, async ({ req, deps }) => {
+    const body = requireObject(await readJsonBody(req));
+    assertNoUnknownKeys(body, ["identityToken", "nonce", "displayName"]);
+    const issued = await authUseCases.signInWithApple(deps, {
+      identityToken: readString(body, "identityToken", { required: true, max: 10_000 })!,
+      nonce: readString(body, "nonce", { max: 200 }),
+      displayName: readString(body, "displayName", { max: 80 }),
+      userAgent: (req.headers["user-agent"] as string | undefined) ?? null,
+    });
+    return { status: 201, body: { session: dto.sessionDto(issued) } };
+  });
+
+  route("POST", "/api/v1/auth/logout", true, async ({ sessionId, deps }) => {
+    await authUseCases.signOut(deps, sessionId);
+    return { status: 204 };
+  });
 
   // ---------------------------------------------------------------- devices
   route("POST", "/api/v1/devices", true, async ({ req, userId, deps }) => {
@@ -488,12 +510,17 @@ export function createApp(options: AppOptions = {}): http.Server {
 
     try {
       let userId = "";
+      let sessionId: string | null = null;
       if (matched.auth) {
-        userId = resolveUserId(req, env);
+        const auth = await resolveAuth(req, env, deps);
+        userId = auth.userId;
+        sessionId = auth.sessionId;
         requestUserIds.set(res, userId);
-        await deps.store.ensureUser(userId);
+        if (auth.via === "local-header") await deps.store.ensureUser(userId);
       }
-      const result = await matched.handle({ req, res, url, params, traceId, userId, deps });
+      const result = await matched.handle({
+        req, res, url, params, traceId, userId, sessionId, deps,
+      });
       if (result.status === 204) sendEmpty(res, 204, traceId);
       else if (typeof result.body === "string") {
         sendText(res, result.status, result.body, "text/plain; version=0.0.4; charset=utf-8", traceId);
