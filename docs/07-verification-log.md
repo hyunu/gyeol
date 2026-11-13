@@ -2,14 +2,14 @@
 
 - 최종 실행: 2026-11-14
 - 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db`
-- 결과: **17 tests / pass 17 / fail 0**, DB **10 tests / pass 10 / fail 0**,
-  계약 스키마 10 · 예제 15 · OpenAPI 유효, DB 마이그레이션·제약 검사 통과
+- 결과: **26 tests / pass 26 / fail 0**, DB **14 tests / pass 14 / fail 0**,
+  계약 스키마 11 · 예제 17 · OpenAPI 유효, DB 마이그레이션(2건)·제약 검사 통과
 
 ## 1. 자동 검증 항목
 
 | # | 검증 | 근거 파일 | 결과 |
 | --- | --- | --- | --- |
-| 1 | JSON Schema 10종 컴파일·`$id` 유일성 | `tools/validate-contracts.mjs` | 통과 |
+| 1 | JSON Schema 11종 컴파일·`$id` 유일성 | `tools/validate-contracts.mjs` | 통과 |
 | 2 | 모든 스키마에 valid 예제 존재 | 동일 | 통과 |
 | 3 | valid 예제가 스키마 통과 / invalid 예제가 실패 | 동일 | 통과 |
 | 4 | OpenAPI 3.1 유효 + `$ref` 해석 | 동일 | 통과 |
@@ -26,6 +26,11 @@
 | 15 | 운영 환경에서 `X-User-Id` 차단(fail-closed) | 동일 | 통과 |
 | 16 | 알 수 없는 필드 거부 | 동일 | 통과 |
 | 17 | 재분석 시 파생 데이터 교체(중복 누적 없음) | 동일 | 통과 |
+| 18 | 비동기 분석: 등록→선점→성공, 활성 작업 멱등 | `tests/async-analysis.test.ts` | 통과 |
+| 19 | 백오프 재시도(attempt 증가)와 한도 초과 실패 | 동일 | 통과 |
+| 20 | 분석 타임아웃 → `failed`, 녹음 `analysis_failed` | 동일 | 통과 |
+| 21 | 만료 임차 회수(attempt 증가), 타 사용자 작업 404 | 동일 | 통과 |
+| 22 | API 백그라운드 워커가 등록 작업을 처리(HTTP 폴링) | 동일 | 통과 |
 
 ## 2. 통합 테스트가 실제로 확인한 것
 
@@ -39,7 +44,7 @@
 
 ## 2.1 PostgreSQL 패리티 (2026-11-14)
 
-`PostgresStore` 가 MemoryStore 와 같은 의미를 갖는지 실제 SQL 로 확인했다 (`tests/db`, 10건).
+`PostgresStore` 가 MemoryStore 와 같은 의미를 갖는지 실제 SQL 로 확인했다 (`tests/db`, 14건).
 
 | # | 검증 | 결과 |
 | --- | --- | --- |
@@ -53,6 +58,10 @@
 | 25 | 할 일 상태 변경, 인물 조회 | 통과 |
 | 26 | `GYEOL_STORE=postgres` API: `/healthz` db=ok + 계약 테스트 | 통과 |
 | 27 | 전 구간(PostgreSQL): 업로드 재개→ACK→분석→검색→재분석→삭제 | 통과 |
+| 28 | analysis_jobs 활성 작업 1개, 상태·attempt·시간 제약 | 통과 |
+| 29 | 선점 원자성(SKIP LOCKED)과 미래 `available_at` 미선점 | 통과 |
+| 30 | 임차 만료 회수, 한도 초과 시 실패 종료 | 통과 |
+| 31 | 재시도 대기(queued+미래 시각) 후 재선점 | 통과 |
 
 - `numeric` 이 문자열이 아닌 `number` 로, `int8` 이 `number` 로 매핑되는 것을 단언한다.
 - 검색은 MemoryStore 와 같은 규칙(키워드 1.0 / 코사인 유사도, 임계값 0.35, 최신순)을 쓴다.
@@ -62,7 +71,7 @@
 | ID | 항목 | 사유 | 검증 방법(준비됨) |
 | --- | --- | --- | --- |
 | ENV-01 | `0001_init.sql` 실제 적용 | — | **해소 (2026-11-14)** — 14 테이블·확장 2종 적용 확인 |
-| ENV-02 | PostgreSQL `Store` 어댑터 | — | **해소 (2026-11-14)** — `PostgresStore` + `tests/db` 10건 통과 |
+| ENV-02 | PostgreSQL `Store` 어댑터 | — | **해소 (2026-11-14)** — `PostgresStore` + `tests/db` 14건 통과 |
 | ENV-03 | 실물 웨어러블(VAD·PDM·microSD·BLE) | 하드웨어 미확보 | 펌웨어 테스트 + `HW-PENDING` 절차 |
 | ENV-04 | iOS CoreBluetooth/AVFoundation 실연동 | 기기·앱 미개발 | 실기기 시나리오 |
 | ENV-05 | 실제 STT/화자분리/요약 provider | D-05 등 미확정 | provider 어댑터 계약 테스트 |
@@ -75,10 +84,10 @@ Docker(pgvector/pgvector:pg17) 기동 후 빈 DB 에 `0001_init.sql` 을 적용�
 
 | 항목 | 결과 |
 | --- | --- |
-| 마이그레이션 | `✔ 0001_init.sql` (1건, `schema_migrations` 체크섬 기록) |
-| 테이블 | 14 + `schema_migrations` |
+| 마이그레이션 | `✔ 0001_init.sql`, `✔ 0002_analysis_jobs.sql` (2건, `schema_migrations` 체크섬 기록) |
+| 테이블 | 15 + `schema_migrations` |
 | 확장 | `citext` 1.6, `vector` 0.8.7 |
-| 인덱스 / CHECK / FK | 42 / 44 / 20 |
+| 인덱스 / CHECK / FK | 47 / 51 / 23 |
 | 제약 실동작 | `npm run db:checks` 통과 (CHECK·FK·UNIQUE·부분 인덱스·vector 차원) |
 
 ```bash

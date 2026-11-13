@@ -11,7 +11,7 @@
 | R-020 | 웨어러블은 상시 샘플링하고 VAD 로 음성 구간을 판별해 전후 버퍼를 포함해 녹음한다. | Fake 는 WAV 생성만 대체. 실제 VAD 는 펌웨어 검증 필요 | `HW-PENDING` |
 | R-021 | 스마트폰이 없어도 microSD 에 독립 저장을 계속한다. | Fake 기기 오프라인 누적 테스트 통과 | `HW-PENDING` (Fake 검증 완료) |
 | R-022 | BLE 전송은 ACK·재전송·이어받기를 지원한다. | Fake BLE 중단/재개 테스트 통과 | `HW-PENDING` (Fake 검증 완료) |
-| R-023 | 폰은 STT·화자분리·화자식별·대화구성·요약·정보추출·검색데이터 생성 파이프라인을 실행한다. | Fake AI Pipeline 으로 전 구간 통과, 실제 provider 는 ENV-05 | `WIP` |
+| R-023 | 폰은 STT·화자분리·화자식별·대화구성·요약·정보추출·검색데이터 생성 파이프라인을 실행한다. | Fake AI Pipeline + 비동기 작업 큐(ADR-0007)로 전 구간 통과, 실제 provider 는 ENV-05 | `WIP` |
 | R-024 | 결과는 서버에 저장되고 웹에서 날짜별·인물별·요약·검색이 가능하다. | API 완료(통합 테스트), 웹 대시보드 미착수 | `WIP` |
 | R-025 | 하드웨어 의존 코드는 Hardware Adapter 인터페이스 뒤에 두고 Fake Adapter 로 테스트한다. | `packages/hardware-adapter/port.ts` + Fake 통과 | `DONE` |
 | R-026 | AI 엔진은 Provider Adapter 구조로 교체 가능해야 한다. | `AiPipeline` 포트 + Fake 구현 | `DONE` |
@@ -39,7 +39,7 @@
 
 ## 3. Phase 1 완료 조건
 
-1. `npm run check` 통과 (계약 + 타입 + 단위/통합) — **충족 (17 tests)**
+1. `npm run check` 통과 (계약 + 타입 + 단위/통합) — **충족 (26 tests)**
 2. Fake Device → Fake Mobile → API → Fake AI → Conversation 조회/검색 전 구간 통과 — **충족**
 3. 전송 중단 → 재개 시나리오 통과 (바이트 무손실, 해시 일치) — **충족**
 4. `stored` 이전 삭제 요청이 거부되는 테스트 존재 — **충족**

@@ -13,9 +13,10 @@ gyeol/
 │   └── src/
 │       ├── domain/                 # L1: 순수 규칙 (상태전이·삭제조건·화자판정)
 │       ├── ports/                  # Store / AiPipeline / ObjectStorage 계약
-│       ├── usecases/               # L2: 디바이스·녹음·대화 유스케이스
+│       ├── usecases/               # L2: 디바이스·녹음·대화·비동기 분석 유스케이스
 │       ├── adapters/
 │       │   ├── memory/store.ts     # 기준 구현 (테스트·개발)
+│       │   ├── postgres/store.ts   # PostgreSQL 구현 (ADR-0005)
 │       │   ├── storage/local-disk.ts
 │       │   └── ai/fake-pipeline.ts
 │       └── http/                   # L4: 라우팅·검증·problem+json·DTO
@@ -24,23 +25,27 @@ gyeol/
 │   ├── device-fake/index.ts        # WAV 생성·로컬 저장·전송 ACK
 │   └── mobile-fake/index.ts        # BLE 수신·재개, 업로드·재개, ACK 원장
 ├── contracts/
-│   ├── openapi/openapi.yaml        # 12개 오퍼레이션
+│   ├── openapi/openapi.yaml        # 13개 오퍼레이션
 │   ├── schemas/common/*.json       # problem, page, health
 │   ├── schemas/domain/*.json       # device, recording, session, conversation…
 │   └── examples/**/{valid,invalid}
 ├── db/
-│   ├── migrations/0001_init.sql    # 14개 테이블 (실행 검증 ENV-PENDING)
+│   ├── migrations/0001_init.sql    # 14개 테이블
+│   ├── migrations/0002_analysis_jobs.sql  # 비동기 분석 작업 큐 (ADR-0007)
+│   ├── checks/*.sql                # 제약 실동작 검증
 │   └── README.md
 ├── deploy/docker-compose.yml       # pgvector 로컬 DB
 ├── scripts/db-migrate.mjs          # 체크섬 기반 마이그레이션 러너
 ├── tests/
-│   ├── integration.test.ts         # 전 구간 5 시나리오
-│   └── unit/domain.test.ts         # 규칙 6건
+│   ├── integration.test.ts         # 전 구간 시나리오
+│   ├── async-analysis.test.ts      # 작업 큐·재시도·타임아웃·임차 회수
+│   ├── db/                         # PostgreSQL 패리티·작업 큐
+│   └── unit/domain.test.ts         # 도메인 규칙
 ├── tools/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~07, 10, adr/0001~0005)
+├── docs/ (00~08, 10, adr/0001~0007)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```
 

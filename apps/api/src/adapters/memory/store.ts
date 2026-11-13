@@ -2,6 +2,7 @@ import { conflict } from "../../domain/errors.ts";
 import { uuidv7 } from "../../domain/ids.ts";
 import type {
   ActionItem,
+  AnalysisJob,
   Conversation,
   ConversationDetail,
   Device,
@@ -52,6 +53,7 @@ export class MemoryStore implements Store {
   private actions = new Map<string, ActionItem[]>();
   private embeddings = new Map<string, { provider: string; model: string; dim: number; vector: number[] }>();
   private links: Link[] = [];
+  private analysisJobs = new Map<string, AnalysisJob>();
 
   ensureUser(id: string): Promise<User> {
     const existing = this.users.get(id);
@@ -417,6 +419,82 @@ export class MemoryStore implements Store {
     const next = list.map((a) => (a.id === item.id ? clone(item) : a));
     this.actions.set(item.conversationId, next);
     return Promise.resolve(clone(item));
+  }
+
+  // ------------------------------------------------------------ analysis jobs
+  async createAnalysisJob(job: AnalysisJob): Promise<AnalysisJob> {
+    const active = await this.findActiveAnalysisJob(job.recordingId);
+    // PostgreSQL 의 부분 유니크 인덱스(analysis_jobs_active_uk)와 같은 의미.
+    if (active) return clone(active);
+    this.analysisJobs.set(job.id, clone(job));
+    return clone(job);
+  }
+
+  findAnalysisJob(id: string): Promise<AnalysisJob | null> {
+    const job = this.analysisJobs.get(id);
+    return Promise.resolve(job ? clone(job) : null);
+  }
+
+  findActiveAnalysisJob(recordingId: string): Promise<AnalysisJob | null> {
+    const active = [...this.analysisJobs.values()].find(
+      (job) => job.recordingId === recordingId && (job.status === "queued" || job.status === "running"),
+    );
+    return Promise.resolve(active ? clone(active) : null);
+  }
+
+  updateAnalysisJob(job: AnalysisJob): Promise<AnalysisJob> {
+    this.analysisJobs.set(job.id, clone(job));
+    return Promise.resolve(clone(job));
+  }
+
+  async claimNextAnalysisJob(now: Date): Promise<AnalysisJob | null> {
+    const jobs = [...this.analysisJobs.values()];
+
+    // 만료 임차 회수. 재시도 한도를 이미 쓴 작업은 실패로 종료한다.
+    for (const job of jobs) {
+      if (job.status !== "running" || !job.leaseExpiresAt) continue;
+      if (job.leaseExpiresAt.getTime() > now.getTime()) continue;
+      if (job.attempt >= job.maxAttempts) {
+        this.analysisJobs.set(job.id, {
+          ...job,
+          status: "failed",
+          leaseExpiresAt: null,
+          finishedAt: now,
+          lastError: job.lastError ?? "워커 임차 만료",
+          updatedAt: now,
+        });
+      } else {
+        this.analysisJobs.set(job.id, {
+          ...job,
+          status: "queued",
+          availableAt: now,
+          leaseExpiresAt: null,
+          lastError: "워커 임차 만료",
+          updatedAt: now,
+        });
+      }
+    }
+
+    const next = [...this.analysisJobs.values()]
+      .filter((job) => job.status === "queued" && job.availableAt.getTime() <= now.getTime())
+      .sort(
+        (a, b) =>
+          a.availableAt.getTime() - b.availableAt.getTime() ||
+          a.createdAt.getTime() - b.createdAt.getTime() ||
+          a.id.localeCompare(b.id),
+      )[0];
+    if (!next) return null;
+
+    const claimed: AnalysisJob = {
+      ...next,
+      status: "running",
+      attempt: next.attempt + 1,
+      startedAt: now,
+      leaseExpiresAt: new Date(now.getTime() + next.timeoutMs),
+      updatedAt: now,
+    };
+    this.analysisJobs.set(claimed.id, claimed);
+    return clone(claimed);
   }
 }
 

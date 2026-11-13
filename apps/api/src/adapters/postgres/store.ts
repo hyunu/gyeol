@@ -3,6 +3,7 @@ import { conflict } from "../../domain/errors.ts";
 import { uuidv7 } from "../../domain/ids.ts";
 import type {
   ActionItem,
+  AnalysisJob,
   Conversation,
   ConversationDetail,
   Device,
@@ -762,6 +763,104 @@ export class PostgresStore implements Store {
     );
     return rows[0] ? mapActionItem(rows[0]) : item;
   }
+
+  // ----------------------------------------------------------- analysis jobs
+  async createAnalysisJob(job: AnalysisJob): Promise<AnalysisJob> {
+    try {
+      const { rows } = await this.pool.query(
+        `INSERT INTO analysis_jobs (
+           id, user_id, recording_id, status, attempt, max_attempts, timeout_ms,
+           available_at, started_at, finished_at, lease_expires_at, conversation_id,
+           last_error, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+         RETURNING *`,
+        analysisJobParams(job),
+      );
+      return mapAnalysisJob(rows[0]);
+    } catch (err) {
+      if (isUniqueViolation(err, "analysis_jobs_active_uk")) {
+        const active = await this.findActiveAnalysisJob(job.recordingId);
+        if (active) return active;
+      }
+      throw err;
+    }
+  }
+
+  async findAnalysisJob(id: string): Promise<AnalysisJob | null> {
+    const { rows } = await this.pool.query(`SELECT * FROM analysis_jobs WHERE id = $1`, [id]);
+    return rows[0] ? mapAnalysisJob(rows[0]) : null;
+  }
+
+  async findActiveAnalysisJob(recordingId: string): Promise<AnalysisJob | null> {
+    const { rows } = await this.pool.query(
+      `SELECT * FROM analysis_jobs
+       WHERE recording_id = $1 AND status IN ('queued', 'running')
+       ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [recordingId],
+    );
+    return rows[0] ? mapAnalysisJob(rows[0]) : null;
+  }
+
+  async updateAnalysisJob(job: AnalysisJob): Promise<AnalysisJob> {
+    const { rows } = await this.pool.query(
+      `UPDATE analysis_jobs SET
+         status = $2, attempt = $3, max_attempts = $4, timeout_ms = $5, available_at = $6,
+         started_at = $7, finished_at = $8, lease_expires_at = $9, conversation_id = $10,
+         last_error = $11, updated_at = $12
+       WHERE id = $1
+       RETURNING *`,
+      [
+        job.id,
+        job.status,
+        job.attempt,
+        job.maxAttempts,
+        job.timeoutMs,
+        job.availableAt,
+        job.startedAt,
+        job.finishedAt,
+        job.leaseExpiresAt,
+        job.conversationId,
+        job.lastError,
+        job.updatedAt,
+      ],
+    );
+    return rows[0] ? mapAnalysisJob(rows[0]) : job;
+  }
+
+  async claimNextAnalysisJob(now: Date): Promise<AnalysisJob | null> {
+    return this.tx(async (client) => {
+      // 워커가 죽어 임차가 만료된 작업을 회수한다. 재시도 한도를 쓴 작업은 종료한다.
+      await client.query(
+        `UPDATE analysis_jobs SET status = 'failed', finished_at = $1, updated_at = $1,
+           last_error = COALESCE(last_error, '워커 임차 만료')
+         WHERE status = 'running' AND lease_expires_at <= $1 AND attempt >= max_attempts`,
+        [now],
+      );
+      await client.query(
+        `UPDATE analysis_jobs SET status = 'queued', available_at = $1, updated_at = $1,
+           last_error = COALESCE(last_error, '워커 임차 만료')
+         WHERE status = 'running' AND lease_expires_at <= $1`,
+        [now],
+      );
+
+      const { rows } = await client.query(
+        `UPDATE analysis_jobs SET
+           status = 'running', attempt = attempt + 1, started_at = $1,
+           lease_expires_at = $1::timestamptz + (timeout_ms * interval '1 millisecond'),
+           updated_at = $1
+         WHERE id = (
+           SELECT id FROM analysis_jobs
+           WHERE status = 'queued' AND available_at <= $1
+           ORDER BY available_at ASC, created_at ASC, id ASC
+           LIMIT 1
+           FOR UPDATE SKIP LOCKED
+         )
+         RETURNING *`,
+        [now],
+      );
+      return rows[0] ? mapAnalysisJob(rows[0]) : null;
+    });
+  }
 }
 
 // ------------------------------------------------------------------ mapping
@@ -923,6 +1022,26 @@ function mapActionItem(row: Row): ActionItem {
   };
 }
 
+function mapAnalysisJob(row: Row): AnalysisJob {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    recordingId: row.recording_id,
+    status: row.status,
+    attempt: Number(row.attempt),
+    maxAttempts: Number(row.max_attempts),
+    timeoutMs: Number(row.timeout_ms),
+    availableAt: row.available_at,
+    startedAt: row.started_at ?? null,
+    finishedAt: row.finished_at ?? null,
+    leaseExpiresAt: row.lease_expires_at ?? null,
+    conversationId: row.conversation_id ?? null,
+    lastError: row.last_error ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 // ------------------------------------------------------------------- params
 
 function recordingParams(recording: Recording): unknown[] {
@@ -962,6 +1081,26 @@ function recordingUpdateParams(recording: Recording): unknown[] {
   // UPDATE 는 created_at 을 바꾸지 않는다(recordingParams 의 25번째 값, 0-based index 24).
   params.splice(24, 1);
   return params;
+}
+
+function analysisJobParams(job: AnalysisJob): unknown[] {
+  return [
+    job.id,
+    job.userId,
+    job.recordingId,
+    job.status,
+    job.attempt,
+    job.maxAttempts,
+    job.timeoutMs,
+    job.availableAt,
+    job.startedAt,
+    job.finishedAt,
+    job.leaseExpiresAt,
+    job.conversationId,
+    job.lastError,
+    job.createdAt,
+    job.updatedAt,
+  ];
 }
 
 // ------------------------------------------------------------------- helpers

@@ -13,19 +13,20 @@
 | --- | --- |
 | 스펙·요구사항 | 완료 |
 | 도메인 모델·ERD·상태 전이 | 완료 (M-01~M-04 반영) |
-| OpenAPI 계약 + 스키마 10종 | 완료 (12 오퍼레이션) |
+| OpenAPI 계약 + 스키마 11종 | 완료 (13 오퍼레이션) |
 | Recording / Conversation API | 완료 (메모리·PostgreSQL 저장소) |
+| 비동기 분석 작업 큐 | 완료 (ADR-0007, 재시도·타임아웃·임차 회수) |
 | Fake Hardware / Fake Mobile | 완료 |
-| 통합·계약 테스트 | 완료 — 17 tests |
-| PostgreSQL 마이그레이션·제약 검증 | 완료 (14 테이블, `npm run db:checks`) |
-| PostgreSQL `Store` 어댑터 | 완료 — `test:db` 10 tests |
+| 통합·계약 테스트 | 완료 — 26 tests |
+| PostgreSQL 마이그레이션·제약 검증 | 완료 (15 테이블, `npm run db:checks`) |
+| PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
 | 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
 
 ## 빠른 시작
 
 ```bash
 npm install
-npm run check      # 계약 + 타입 + 테스트 (17 tests)
+npm run check      # 계약 + 타입 + 테스트 (26 tests)
 npm start          # http://127.0.0.1:8080 (메모리 저장소)
 ```
 
@@ -38,7 +39,7 @@ npm run db:migrate
 GYEOL_STORE=postgres npm start
 
 npm run db:checks  # 제약·인덱스 실동작 검증
-npm run test:db    # Store 패리티 테스트 (10 tests)
+npm run test:db    # Store·작업 큐 테스트 (14 tests)
 ```
 
 로컬 개발은 임시 인증 헤더를 쓴다(ADR-0003).
@@ -69,7 +70,8 @@ npm run contract-test
 | POST | `/api/v1/recordings/{id}/upload-sessions` | 재전송 세션 발급 |
 | PUT | `/api/v1/recordings/{id}/upload-sessions/{sid}/chunks?offset=` | 청크 업로드(재개) |
 | POST | `/api/v1/recordings/{id}/ack` | 클라이언트 최종 ACK |
-| POST | `/api/v1/recordings/{id}/analyze` | AI 분석(재분석 가능) |
+| POST | `/api/v1/recordings/{id}/analyze` | AI 분석 작업 등록(202, 재분석 가능) |
+| GET | `/api/v1/analysis-jobs/{id}` | 분석 작업 상태 폴링 |
 | GET | `/api/v1/conversations` | 날짜·인물·검색(q) |
 | GET | `/api/v1/conversations/{id}` | 상세(세그먼트·화자·엔티티·할 일) |
 | GET | `/api/v1/persons` | 인물 목록 |
@@ -100,7 +102,8 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 ## 알려진 제한 (의도된 현재 상태)
 
 - 기본 저장소는 **메모리**다(ADR-0005). `GYEOL_STORE=postgres` 로 PostgreSQL 을 쓸 수 있다.
-- 분석이 **요청 내 동기 실행**이다(ADR-0004). 실제 AI 도입 시 작업 큐 필요(W-15).
+- 분석은 **비동기 작업 큐**다(ADR-0007). `POST .../analyze` 는 202 로 작업을 만들고,
+  `GET /api/v1/analysis-jobs/{jobId}` 로 폴링한다. 워커는 API 프로세스 안에서 돈다.
 - `X-User-Id` 는 **로컬 전용**이며 `GYEOL_ENV != local` 이면 401(ADR-0003).
 - 오브젝트 스토리지는 **로컬 디스크**다. 운영용 S3/MinIO 어댑터는 W-14.
 
@@ -109,6 +112,6 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 작업 순서와 완료 조건은 [`docs/08-work-order.md`](docs/08-work-order.md) 를 따른다.
 
 1. 스키마 결정 — D-05(임베딩 차원), D-04(코덱), D-01(인증), D-08(보존) (W-10~W-13)
-2. 웹 대시보드 (W-16·W-17)
-3. 실제 AI provider 어댑터 + 비동기 분석 (W-15·W-18)
+2. 오브젝트 스토리지 S3/MinIO 어댑터 (W-14) · 웹 대시보드 (W-16·W-17)
+3. 실제 AI provider 어댑터 (W-18)
 4. 실물 웨어러블 + iOS BLE 연동 (W-20~W-24, `HW-PENDING`)

@@ -9,6 +9,7 @@ import { defaultDeps, pagination, type Deps } from "../usecases/deps.ts";
 import * as deviceUseCases from "../usecases/devices.ts";
 import * as recordingUseCases from "../usecases/recordings.ts";
 import * as conversationUseCases from "../usecases/conversations.ts";
+import * as analysisUseCases from "../usecases/analysis.ts";
 import { methodNotAllowed, notFound, validationFailed } from "../domain/errors.ts";
 import type { ActionItemStatus } from "../domain/types.ts";
 import type { Store } from "../ports/store.ts";
@@ -52,6 +53,12 @@ export interface AppOptions {
   storageDir?: string;
   env?: string;
   version?: string;
+  /**
+   * 백그라운드 분석 워커(ADR-0007).
+   * 기본값은 `GYEOL_ANALYSIS_WORKER=off` 가 아니면 켜진다.
+   * 테스트는 `{ enabled: false }` 로 끄고 `runNextAnalysisJob` 을 직접 호출한다.
+   */
+  worker?: { enabled?: boolean; intervalMs?: number };
 }
 
 /**
@@ -145,7 +152,7 @@ export function createApp(options: AppOptions = {}): http.Server {
       apiVersion: "v1",
       contractVersion: CONTRACT_VERSION,
       provisional: true,
-      capabilities: ["devices", "recordings", "conversations", "persons", "action-items"],
+      capabilities: ["devices", "recordings", "analysis-jobs", "conversations", "persons", "action-items"],
     },
   }));
 
@@ -295,11 +302,16 @@ export function createApp(options: AppOptions = {}): http.Server {
   });
 
   route("POST", "/api/v1/recordings/:recordingId/analyze", true, async ({ params, userId, deps }) => {
-    const result = await recordingUseCases.analyzeRecording(deps, userId, params.recordingId);
+    const result = await analysisUseCases.enqueueAnalysis(deps, userId, params.recordingId);
     return {
       status: 202,
-      body: { recording: dto.recordingDto(result.recording), conversationId: result.conversationId },
+      body: { recording: dto.recordingDto(result.recording), job: dto.analysisJobDto(result.job) },
     };
+  });
+
+  route("GET", "/api/v1/analysis-jobs/:jobId", true, async ({ params, userId, deps }) => {
+    const job = await analysisUseCases.getAnalysisJob(deps, userId, params.jobId);
+    return { status: 200, body: { job: dto.analysisJobDto(job) } };
   });
 
   // ---------------------------------------------------------- conversations
@@ -360,11 +372,10 @@ export function createApp(options: AppOptions = {}): http.Server {
     return { status: 200, body: dto.actionItemDto(item) };
   });
 
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     const traceId = (req.headers["x-request-id"] as string) ?? randomUUID();
     const url = new URL(req.url ?? "/", "http://localhost");
     const pathSegments = split(url.pathname);
-
     let matched: Route | undefined;
     let params: Record<string, string> = {};
     for (const candidate of routes) {
@@ -418,4 +429,21 @@ export function createApp(options: AppOptions = {}): http.Server {
       sendProblem(res, err, traceId, url.pathname);
     }
   });
+
+  const workerEnabled =
+    options.worker?.enabled ?? process.env.GYEOL_ANALYSIS_WORKER !== "off";
+  if (workerEnabled) {
+    const worker = new analysisUseCases.AnalysisWorker(
+      deps,
+      options.worker?.intervalMs ?? 1000,
+    );
+    server.on("listening", () => {
+      worker.start();
+      // 대기 중인 작업이 있으면 즉시 하나 처리한다.
+      void worker.runOnce().catch(() => undefined);
+    });
+    server.on("close", () => worker.stop());
+  }
+
+  return server;
 }

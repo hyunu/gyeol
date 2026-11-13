@@ -8,6 +8,7 @@ import { MemoryStore } from "../apps/api/src/adapters/memory/store.ts";
 import { LocalDiskStorage } from "../apps/api/src/adapters/storage/local-disk.ts";
 import { FakeAiPipeline } from "../apps/api/src/adapters/ai/fake-pipeline.ts";
 import { defaultDeps, type Deps } from "../apps/api/src/usecases/deps.ts";
+import { drainAnalysisJobs } from "../apps/api/src/usecases/analysis.ts";
 import { FakeWearable } from "../packages/device-fake/index.ts";
 import { FakePhone } from "../packages/mobile-fake/index.ts";
 import { runContractTests } from "../tools/contract-test.mjs";
@@ -34,7 +35,7 @@ async function startApp(options: { env?: string; uploadTtlMs?: number; clock?: {
   });
   if (options.uploadTtlMs !== undefined) deps.upload = { ...deps.upload, sessionTtlMs: options.uploadTtlMs };
 
-  const server = createApp({ deps, storageDir, env: options.env ?? "local" });
+  const server = createApp({ deps, storageDir, env: options.env ?? "local", worker: { enabled: false } });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (typeof address === "string" || !address) throw new Error("listen 실패");
@@ -169,11 +170,27 @@ test("전 구간: 기기 → BLE(중단/재개) → 업로드(중단/재개) →
   }
   phone.deleteLocalAfterAck(first.clientRecordingId);
 
-  // 7) 분석
+  // 7) 분석: 작업 등록 → 워커 실행 → 대화 생성
   const analyzed = await harness.call("POST", `/api/v1/recordings/${item.recordingId}/analyze`);
   assert.equal(analyzed.status, 202);
-  const conversationId = analyzed.body.conversationId;
-  assert.equal(analyzed.body.recording.status, "analyzed");
+  assert.equal(analyzed.body.job.status, "queued");
+  assert.equal(analyzed.body.recording.status, "stored", "등록만 하고 바로 분석하지 않는다");
+  const jobId = analyzed.body.job.id;
+
+  const queued = await harness.call("GET", `/api/v1/analysis-jobs/${jobId}`);
+  assert.equal(queued.status, 200);
+  assert.equal(queued.body.job.status, "queued");
+  assert.equal(queued.body.job.conversationId, null);
+
+  await drainAnalysisJobs(harness.deps);
+  const finished = await harness.call("GET", `/api/v1/analysis-jobs/${jobId}`);
+  assert.equal(finished.body.job.status, "succeeded");
+  assert.equal(finished.body.job.attempt, 1);
+  assert.ok(finished.body.job.finishedAt);
+  const conversationId = finished.body.job.conversationId;
+
+  const afterAnalysis = await harness.call("GET", `/api/v1/recordings/${item.recordingId}`);
+  assert.equal(afterAnalysis.body.recording.status, "analyzed");
 
   const detail = await harness.call("GET", `/api/v1/conversations/${conversationId}`);
   assert.equal(detail.status, 200);
@@ -209,7 +226,12 @@ test("전 구간: 기기 → BLE(중단/재개) → 업로드(중단/재개) →
   // 8-b) 재분석: 파생 데이터 교체(중복 누적 없음), 대화는 1건 유지
   const reanalyzed = await harness.call("POST", `/api/v1/recordings/${item.recordingId}/analyze`);
   assert.equal(reanalyzed.status, 202);
-  assert.equal(reanalyzed.body.conversationId, conversationId, "재분석은 같은 대화를 갱신");
+  assert.equal(reanalyzed.body.job.recordingId, item.recordingId);
+  assert.notEqual(reanalyzed.body.job.id, jobId, "끝난 작업 뒤에는 새 작업을 만든다");
+  await drainAnalysisJobs(harness.deps);
+  const reJob = await harness.call("GET", `/api/v1/analysis-jobs/${reanalyzed.body.job.id}`);
+  assert.equal(reJob.body.job.status, "succeeded");
+  assert.equal(reJob.body.job.conversationId, conversationId, "재분석은 같은 대화를 갱신");
   const afterReanalysis = await harness.call("GET", `/api/v1/conversations/${conversationId}`);
   assert.equal(afterReanalysis.body.analysisVersion, 2);
   assert.equal(afterReanalysis.body.segments.length, 3, "세그먼트가 누적되지 않고 교체됨");
@@ -245,6 +267,7 @@ test("전 구간: 기기 → BLE(중단/재개) → 업로드(중단/재개) →
   const secondId = phone.get(second.clientRecordingId).recordingId!;
   const secondAnalyzed = await harness.call("POST", `/api/v1/recordings/${secondId}/analyze`);
   assert.equal(secondAnalyzed.status, 202);
+  await drainAnalysisJobs(harness.deps);
   const all = await harness.call("GET", "/api/v1/conversations");
   assert.equal(all.body.total, 2, "서로 다른 대화 2건");
 });

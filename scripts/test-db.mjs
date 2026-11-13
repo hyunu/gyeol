@@ -38,7 +38,7 @@ if (!process.env.DATABASE_URL) {
 
 const child = spawn(
   process.execPath,
-  ["--test", ...files.map((file) => path.join(DIR, file))],
+  ["--test", "--test-concurrency=1", ...files.map((file) => path.join(DIR, file))],
   { stdio: "inherit", env: { ...process.env, GYEOL_STORE: "postgres" } },
 );
 

@@ -1,5 +1,6 @@
 import type {
   ActionItem,
+  AnalysisJob,
   Conversation,
   ConversationDetail,
   Device,
@@ -61,8 +62,25 @@ export function recordingDto(recording: Recording) {
   };
 }
 
-export function uploadSessionDto(session: UploadSession) {
+export function analysisJobDto(job: AnalysisJob) {
   return {
+    id: job.id,
+    recordingId: job.recordingId,
+    status: job.status,
+    attempt: job.attempt,
+    maxAttempts: job.maxAttempts,
+    timeoutMs: job.timeoutMs,
+    availableAt: job.availableAt.toISOString(),
+    startedAt: iso(job.startedAt),
+    finishedAt: iso(job.finishedAt),
+    conversationId: job.conversationId,
+    lastError: job.lastError,
+    createdAt: job.createdAt.toISOString(),
+    updatedAt: job.updatedAt.toISOString(),
+  };
+}
+
+export function uploadSessionDto(session: UploadSession) {  return {
     id: session.id,
     recordingId: session.recordingId,
     status: session.status,

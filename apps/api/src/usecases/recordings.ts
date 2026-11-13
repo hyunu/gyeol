@@ -9,14 +9,11 @@ import {
 } from "../domain/errors.ts";
 import { uuidv7 } from "../domain/ids.ts";
 import {
-  canAnalyze,
   deletionBlockers,
   isDeletable,
   verifyIntegrity,
 } from "../domain/recording.ts";
-import { decideIdentification } from "../domain/speaker.ts";
 import type { Recording, UploadSession } from "../domain/types.ts";
-import type { NewConversation } from "../ports/store.ts";
 import type { Deps } from "./deps.ts";
 
 export interface CreateRecordingInput {
@@ -257,110 +254,6 @@ export async function deleteRecording(deps: Deps, userId: string, recordingId: s
     status: "purged",
     storageKey: null,
     purgedAt: now,
-    updatedAt: now,
-  });
-}
-
-export async function analyzeRecording(
-  deps: Deps,
-  userId: string,
-  recordingId: string,
-): Promise<{ recording: Recording; conversationId: string }> {
-  let recording = await ownedRecording(deps, userId, recordingId);
-  if (!canAnalyze(recording)) throw notStored(recording.status);
-  if (!recording.storageKey) throw notStored(recording.status);
-
-  const audio = await deps.storage.read(recording.storageKey);
-  const now = deps.clock.now();
-  recording = await deps.store.updateRecording({ ...recording, status: "analyzing", updatedAt: now });
-
-  try {
-    const result = await deps.ai.analyze({ recording, audio });
-    const speakers = [] as NewConversation["speakers"];
-    for (const speaker of result.speakers) {
-      let personId: string | null = null;
-      let status: "unknown" | "suggested" | "confirmed" = "unknown";
-      let confidence: number | null = null;
-
-      if (speaker.personName) {
-        const person = await ensurePerson(deps, userId, speaker.personName);
-        const decision = decideIdentification(
-          [{ personId: person.id, score: speaker.confidence ?? 0 }],
-          deps.speakerThreshold.threshold,
-          deps.speakerThreshold.margin,
-        );
-        personId = decision.personId;
-        status = decision.status;
-        confidence = decision.confidence;
-      }
-      speakers.push({ label: speaker.label, personId, identificationStatus: status, confidence });
-    }
-
-    const existing = await deps.store.findConversationByRecordingId(recording.id);
-    const previousLinks = existing
-      ? (await deps.store.listRecordingLinks(existing.id)).filter((l) => l.recordingId !== recording.id)
-      : [];
-    const input: NewConversation = {
-      userId,
-      title: result.title,
-      summary: result.summary,
-      language: result.language,
-      startedAt: recording.startedAt,
-      endedAt: recording.endedAt,
-      status: result.status,
-      analysisVersion: 1,
-      pipeline: result.pipeline,
-      speakers,
-      segments: result.segments,
-      entities: result.entities,
-      actionItems: result.actionItems,
-      embedding: result.embedding,
-      recordingLinks: [
-        ...previousLinks,
-        { recordingId: recording.id, startOffsetMs: 0, endOffsetMs: recording.durationMs },
-      ],
-    };
-
-    const conversation = existing
-      ? await deps.store.replaceConversation(existing.id, {
-          ...input,
-          analysisVersion: existing.analysisVersion + 1,
-        })
-      : await deps.store.createConversation(input);
-
-    const done = deps.clock.now();
-    const analyzed = await deps.store.updateRecording({
-      ...recording,
-      status: "analyzed",
-      analyzedAt: done,
-      updatedAt: done,
-    });
-    return { recording: analyzed, conversationId: conversation.id };
-  } catch (err) {
-    const failedAt = deps.clock.now();
-    await deps.store.updateRecording({
-      ...recording,
-      status: "analysis_failed",
-      updatedAt: failedAt,
-    });
-    throw conflict(
-      "ANALYSIS_FAILED",
-      "분석에 실패했습니다.",
-      err instanceof Error ? err.message : String(err),
-    );
-  }
-}
-
-async function ensurePerson(deps: Deps, userId: string, displayName: string) {
-  const existing = await deps.store.findPerson(userId, displayName);
-  if (existing) return existing;
-  const now = deps.clock.now();
-  return deps.store.createPerson({
-    id: uuidv7(),
-    userId,
-    displayName,
-    notes: null,
-    createdAt: now,
     updatedAt: now,
   });
 }

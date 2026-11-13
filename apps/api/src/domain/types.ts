@@ -14,6 +14,8 @@ export type RecordingStatus =
 
 export type UploadSessionStatus = "open" | "completed" | "aborted" | "expired";
 
+export type AnalysisJobStatus = "queued" | "running" | "succeeded" | "failed";
+
 export type ConversationStatus = "ready" | "partial";
 
 export type IdentificationStatus = "unknown" | "suggested" | "confirmed";
@@ -162,6 +164,30 @@ export interface ConversationEmbedding {
   model: string;
   dim: number;
   vector: number[];
+}
+
+/**
+ * 비동기 분석 작업 (ADR-0007).
+ *
+ * `attempt` 는 워커가 클레임한 횟수다. `attempt < maxAttempts` 이면 재시도 여지가 있다.
+ * `leaseExpiresAt` 은 워커가 살아 있는 동안의 임차 만료 시각이며, 지나면 다른 워커가 회수한다.
+ */
+export interface AnalysisJob {
+  id: string;
+  userId: string;
+  recordingId: string;
+  status: AnalysisJobStatus;
+  attempt: number;
+  maxAttempts: number;
+  timeoutMs: number;
+  availableAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  leaseExpiresAt: Date | null;
+  conversationId: string | null;
+  lastError: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ConversationDetail {

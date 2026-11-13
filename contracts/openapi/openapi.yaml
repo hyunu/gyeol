@@ -318,12 +318,16 @@ paths:
     post:
       operationId: analyzeRecording
       tags: [recordings]
-      summary: AI 분석 실행
+      summary: AI 분석 작업 등록
       description: |
-        `stored` 상태에서만 실행 가능. 이미 분석된 경우 재분석하며 `analysisVersion` 이 증가한다.
+        분석을 작업 큐에 넣고 즉시 202 를 돌려준다(ADR-0007). 결과는
+        `GET /api/v1/analysis-jobs/{jobId}` 로 폴링한다.
+        활성 작업(queued|running)이 이미 있으면 새로 만들지 않고 그 작업을 돌려준다(멱등).
+        `stored`/`analyzed`/`analysis_failed` 에서만 등록할 수 있고, 재분석은
+        이전 작업이 끝난 뒤 새 작업이 되며 `analysisVersion` 이 증가한다.
       responses:
         "202":
-          description: 분석 시작/완료
+          description: 분석 작업 등록됨
           content:
             application/json:
               schema:
@@ -332,6 +336,29 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /api/v1/analysis-jobs/{jobId}:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getAnalysisJob
+      tags: [analysis]
+      summary: 분석 작업 상태 조회
+      description: |
+        `status` 가 `succeeded` 또는 `failed` 가 될 때까지 폴링한다.
+        성공 시 `conversationId` 로 대화를 조회한다. 타 사용자의 작업은 404.
+      responses:
+        "200":
+          description: 분석 작업
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisJobEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /api/v1/conversations:
     get:
@@ -547,11 +574,20 @@ components:
 
     AnalysisAccepted:
       type: object
-      required: [recording, conversationId]
+      required: [recording, job]
       properties:
         recording:
           $ref: "../schemas/domain/recording.json"
-        conversationId: { type: string, format: uuid }
+        job:
+          $ref: "../schemas/domain/analysis-job.json"
+      additionalProperties: false
+
+    AnalysisJobEnvelope:
+      type: object
+      required: [job]
+      properties:
+        job:
+          $ref: "../schemas/domain/analysis-job.json"
       additionalProperties: false
 
     PageOfDevices:

@@ -38,6 +38,8 @@ erDiagram
     devices ||--o{ recordings : "captures"
 
     recordings ||--o{ upload_sessions : "upload attempts"
+    recordings ||--o{ analysis_jobs : "analysis attempts"
+    analysis_jobs ||--o| conversations : "produces (on success)"
     recordings ||--o{ recording_conversations : "M:N (offset)"
     conversations ||--o{ recording_conversations : "M:N (offset)"
 
@@ -313,6 +315,30 @@ erDiagram
 - 모델별로 임계값을 다르게 둘 수 있다. 행이 없으면 전역 기본값(0.800/0.050)을 쓴다.
 - **임계값·마진 중 하나라도 미달이면 `unknown`** 처리한다(오식별 방지 우선, M-03).
 
+### 3.15 `analysis_jobs` (ADR-0007)
+
+| 필드 | 타입 | NULL | 제약/기본 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | uuid | N | PK | 작업 식별자(UUIDv7) |
+| `user_id` | uuid | N | FK users RESTRICT | 소유자(조회 권한) |
+| `recording_id` | uuid | N | FK recordings RESTRICT | 분석 대상 |
+| `status` | text | N | `queued`, CHECK 4종 | `queued`/`running`/`succeeded`/`failed` |
+| `attempt` | integer | N | `0`, CHECK | 선점 횟수 |
+| `max_attempts` | integer | N | `3`, CHECK 1..10 | 재시도 한도 |
+| `timeout_ms` | integer | N | `300000`, CHECK | 실행 타임아웃 |
+| `available_at` | timestamptz | N | `now()` | 다음 실행 가능 시각(백오프) |
+| `started_at` | timestamptz | Y | | 마지막 선점 시각 |
+| `finished_at` | timestamptz | Y | CHECK | 종료 시각(`succeeded`/`failed` 필수) |
+| `lease_expires_at` | timestamptz | Y | CHECK | 워커 임차 만료(running 필수) |
+| `conversation_id` | uuid | Y | FK conversations SET NULL | 성공 산출물 |
+| `last_error` | text | Y | | 마지막 실패 사유 |
+| `created_at` / `updated_at` | timestamptz | N | `now()` | |
+
+- **부분 유니크 인덱스** `analysis_jobs_active_uk (recording_id) WHERE status IN ('queued','running')`
+  로 녹음당 활성 작업을 1개로 제한한다.
+- 선점은 `FOR UPDATE SKIP LOCKED` 로 원자적이다. 만료 임차는 회수한다.
+- `POST .../analyze` 는 작업을 만들기만 하고, 실행은 워커가 한다(ADR-0007).
+
 ---
 
 ## 4. 관계 요약
@@ -324,6 +350,8 @@ erDiagram
 | users → persons | 1:N | CASCADE |
 | devices → recordings | 1:N | RESTRICT |
 | recordings → upload_sessions | 1:N | CASCADE |
+| recordings → analysis_jobs | 1:N | RESTRICT (활성 작업이 있으면 녹음 행 보존) |
+| analysis_jobs → conversations | N:1 (0..1) | SET NULL (대화가 지워져도 작업 이력 유지) |
 | recordings ↔ conversations | N:M (`recording_conversations`) | 연결 행 CASCADE, 대화·녹음은 독립 |
 | conversations → speaker_clusters / segments / entities / actions / embedding | 1:N | CASCADE |
 | speaker_clusters → transcript_segments | 1:N | SET NULL |
@@ -370,10 +398,11 @@ erDiagram
 | (검증) | 검증·저장 완료 | 크기·해시 일치 **그리고** 오브젝트 저장 성공 | `stored` | `integrity_verified_at`, `storage_verified_at`, `storage_key` 기록 |
 | (검증) | 검증 실패 | 불일치 또는 저장 실패 | `integrity_failed` | 임시 바이트 폐기, 세션 `aborted` |
 | `integrity_failed` | 재업로드 시작 | 새 세션 발급 | `initiated` | `expected_*` 재설정 |
-| `stored` | 분석 요청 | `storage_verified_at` 존재 | `analyzing` | 파이프라인 시작 |
+| `stored` | 분석 등록 | `storage_verified_at` 존재, 활성 작업 없음 | `stored` (유지) | `analysis_jobs` 에 `queued` 생성(ADR-0007) |
+| `stored`/`analyzed`/`analysis_failed` | 워커 선점 | 작업 `running` | `analyzing` | 파이프라인 시작 |
 | `analyzing` | 성공 | conversation 생성·연결됨 | `analyzed` | `analyzed_at` |
-| `analyzing` | 실패 | — | `analysis_failed` | 오류 기록 |
-| `analysis_failed` | 재시도 | — | `analyzing` | 시도 횟수 증가 |
+| `analyzing` | 실패(재시도 남음) | `attempt < max_attempts` | `analyzing` (유지) | 작업은 `queued` 로 백오프 |
+| `analyzing` | 실패(한도 초과) | `attempt >= max_attempts` | `analysis_failed` | 오류 기록, 작업 `failed` |
 | `analyzed` | 재분석 | 사용자 요청 | `analyzing` | `analysis_version++` |
 | `stored`/`analyzed` | 원본 삭제 | **§6.2.1 의 5개 조건 모두 충족** | `purged` | 오디오 삭제, `storage_key=NULL`, `purged_at` |
 | 임의 | 사용자 삭제(soft) | — | (변경 없음) | `deleted_at` 설정, 조회 제외 |
@@ -441,6 +470,20 @@ erDiagram
 | 현재 | 이벤트 | 가드 | 다음 | 부수효과 |
 | --- | --- | --- | --- | --- |
 | active | 병합 요청 | 대상 ≠ 자기 자신 | `merged` | `speaker_clusters.person_id` 이전, `merged_into_person_id` 설정, `deleted_at` |
+
+### 6.8 `analysis_job.status` (ADR-0007)
+
+| 현재 | 이벤트 | 가드 | 다음 | 부수효과 |
+| --- | --- | --- | --- | --- |
+| — | 분석 등록 | 활성 작업 없음 | `queued` | `attempt=0`, `available_at=now` |
+| `queued` | 워커 선점 | `available_at <= now` | `running` | `attempt++`, `started_at`, `lease_expires_at` 설정 |
+| `running` | 성공 | — | `succeeded` | `conversation_id`, `finished_at`, `recordings.status='analyzed'` |
+| `running` | 실패 | `attempt < max_attempts` | `queued` | `available_at=now+backoff`, `last_error` |
+| `running` | 실패 | `attempt >= max_attempts` | `failed` | `finished_at`, `recordings.status='analysis_failed'` |
+| `running` | 임차 만료 | 워커 사망 | `queued` 또는 `failed` | 다른 워커가 회수(한도 초과 시 실패) |
+
+- 녹음 등록과 달리 **만료는 삭제가 아니다.** 재분석은 이전 작업 종료 후 새 작업으로 만든다.
+- 재시도 중 `recordings.status` 는 `analyzing` 을 유지한다(전이표에 `analyzing→stored` 없음).
 
 ---
 

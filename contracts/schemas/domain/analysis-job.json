@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/analysis-job.json",
+  "title": "AnalysisJob",
+  "description": "비동기 분석 작업(ADR-0007). POST .../analyze 가 만들고 워커가 선점해 실행한다. status 가 succeeded|failed 가 될 때까지 폴링한다.",
+  "type": "object",
+  "required": [
+    "id", "recordingId", "status", "attempt", "maxAttempts", "timeoutMs",
+    "availableAt", "startedAt", "finishedAt", "conversationId", "lastError",
+    "createdAt", "updatedAt"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "recordingId": { "type": "string", "format": "uuid" },
+    "status": { "type": "string", "enum": ["queued", "running", "succeeded", "failed"] },
+    "attempt": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "워커가 선점한 횟수. attempt < maxAttempts 이면 재시도 여지가 있다."
+    },
+    "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "timeoutMs": { "type": "integer", "minimum": 1000, "maximum": 3600000 },
+    "availableAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "다음 실행 가능 시각. 재시도 백오프가 반영된다."
+    },
+    "startedAt": { "type": ["string", "null"], "format": "date-time" },
+    "finishedAt": { "type": ["string", "null"], "format": "date-time" },
+    "conversationId": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "성공 시 생성/갱신된 대화. 실패·진행 중에는 null."
+    },
+    "lastError": { "type": ["string", "null"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

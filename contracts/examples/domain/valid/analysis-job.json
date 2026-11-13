@@ -1,0 +1,15 @@
+{
+  "id": "0199aaaa-0000-7000-8000-000000000401",
+  "recordingId": "0199aaaa-0000-7000-8000-000000000201",
+  "status": "succeeded",
+  "attempt": 1,
+  "maxAttempts": 3,
+  "timeoutMs": 300000,
+  "availableAt": "2026-11-13T06:56:00Z",
+  "startedAt": "2026-11-13T06:56:01Z",
+  "finishedAt": "2026-11-13T06:56:04Z",
+  "conversationId": "0199aaaa-0000-7000-8000-000000000501",
+  "lastError": null,
+  "createdAt": "2026-11-13T06:56:00Z",
+  "updatedAt": "2026-11-13T06:56:04Z"
+}

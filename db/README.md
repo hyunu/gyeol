@@ -5,7 +5,8 @@
 ## 구성
 
 ```
-db/migrations/0001_init.sql   # Phase 1 초기 스키마 (14개 테이블)
+db/migrations/0001_init.sql        # Phase 1 초기 스키마 (14개 테이블)
+db/migrations/0002_analysis_jobs.sql # 비동기 분석 작업 큐 (ADR-0007)
 ```
 
 PostgreSQL 17 + `pgvector`, `citext` 확장이 필요하다.
@@ -44,10 +45,10 @@ npm run db:migrate
 
 ```
 확장      citext 1.6, vector 0.8.7
-테이블    14 + schema_migrations
-인덱스    42 (부분 유니크: upload_sessions_open_uk)
-CHECK     44
-FK        20
+테이블    15 + schema_migrations
+인덱스    47 (부분 유니크: upload_sessions_open_uk, analysis_jobs_active_uk)
+CHECK     51
+FK        23
 ```
 
 ### 제약 검증 (`db/checks/`)

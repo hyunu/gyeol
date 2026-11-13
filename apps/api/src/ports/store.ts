@@ -1,5 +1,6 @@
 import type {
   ActionItem,
+  AnalysisJob,
   AnalysisResult,
   Conversation,
   ConversationDetail,
@@ -112,6 +113,17 @@ export interface Store {
   findOpenUploadSession(recordingId: string): Promise<UploadSession | null>;
   updateUploadSession(session: UploadSession): Promise<UploadSession>;
   expireUploadSessions(now: Date): Promise<number>;
+
+  createAnalysisJob(job: AnalysisJob): Promise<AnalysisJob>;
+  findAnalysisJob(id: string): Promise<AnalysisJob | null>;
+  /** 녹음당 활성(queued|running) 작업. 중복 enqueue 방지에 쓴다. */
+  findActiveAnalysisJob(recordingId: string): Promise<AnalysisJob | null>;
+  updateAnalysisJob(job: AnalysisJob): Promise<AnalysisJob>;
+  /**
+   * 실행 가능한 작업 하나를 원자적으로 선점한다(queued → running, attempt+1).
+   * 만료된 임차(running, lease_expires_at <= now)는 회수한다. 없으면 null.
+   */
+  claimNextAnalysisJob(now: Date): Promise<AnalysisJob | null>;
 
   createConversation(input: NewConversation): Promise<Conversation>;
   replaceConversation(conversationId: string, input: NewConversation): Promise<Conversation>;

@@ -10,6 +10,7 @@ import { LocalDiskStorage } from "../../apps/api/src/adapters/storage/local-disk
 import { FakeAiPipeline } from "../../apps/api/src/adapters/ai/fake-pipeline.ts";
 import { uuidv7 } from "../../apps/api/src/domain/ids.ts";
 import { defaultDeps } from "../../apps/api/src/usecases/deps.ts";
+import { drainAnalysisJobs } from "../../apps/api/src/usecases/analysis.ts";
 import { FakeWearable } from "../../packages/device-fake/index.ts";
 import { FakePhone } from "../../packages/mobile-fake/index.ts";
 
@@ -43,7 +44,7 @@ test("전 구간(PostgreSQL): 업로드 재개 → 검증 → ACK → 분석 →
     storage: new LocalDiskStorage(storageDir),
     ai: new FakeAiPipeline(),
   });
-  const server = createApp({ deps, storageDir, env: "local" });
+  const server = createApp({ deps, storageDir, env: "local", worker: { enabled: false } });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (typeof address === "string" || !address) throw new Error("listen 실패");
@@ -109,8 +110,11 @@ test("전 구간(PostgreSQL): 업로드 재개 → 검증 → ACK → 분석 →
 
     const analyzed = await call("POST", `/api/v1/recordings/${item.recordingId}/analyze`);
     assert.equal(analyzed.status, 202);
-    const conversationId = analyzed.body.conversationId;
-    assert.equal(analyzed.body.recording.status, "analyzed");
+    assert.equal(analyzed.body.job.status, "queued");
+    await drainAnalysisJobs(deps);
+    const finished = await call("GET", `/api/v1/analysis-jobs/${analyzed.body.job.id}`);
+    assert.equal(finished.body.job.status, "succeeded");
+    const conversationId = finished.body.job.conversationId;
 
     const detail = await call("GET", `/api/v1/conversations/${conversationId}`);
     assert.equal(detail.status, 200);
@@ -129,7 +133,9 @@ test("전 구간(PostgreSQL): 업로드 재개 → 검증 → ACK → 분석 →
 
     const reanalyzed = await call("POST", `/api/v1/recordings/${item.recordingId}/analyze`);
     assert.equal(reanalyzed.status, 202);
-    assert.equal(reanalyzed.body.conversationId, conversationId);
+    await drainAnalysisJobs(deps);
+    const reFinished = await call("GET", `/api/v1/analysis-jobs/${reanalyzed.body.job.id}`);
+    assert.equal(reFinished.body.job.conversationId, conversationId);
     const after = await call("GET", `/api/v1/conversations/${conversationId}`);
     assert.equal(after.body.analysisVersion, 2);
     assert.equal(after.body.segments.length, 3, "재분석은 파생을 교체한다");

@@ -13,12 +13,25 @@ export interface Deps {
   /** 실험값. D-12 확정 전까지 설정으로 취급한다. */
   speakerThreshold: { provider: string; model: string; threshold: number; margin: number };
   upload: { chunkSizeBytes: number; sessionTtlMs: number };
+  /** 비동기 분석 작업 정책 (ADR-0007). 값은 운영 환경에서 조정한다. */
+  analysis: {
+    maxAttempts: number;
+    timeoutMs: number;
+    retryBaseMs: number;
+    retryMaxMs: number;
+  };
 }
 
 export const defaultDeps = (partial: Partial<Deps> & Pick<Deps, "store" | "storage" | "ai">): Deps => ({
   clock: { now: () => new Date() },
   speakerThreshold: { provider: "fake", model: "fake-v1", threshold: 0.8, margin: 0.05 },
   upload: { chunkSizeBytes: 256 * 1024, sessionTtlMs: 24 * 60 * 60 * 1000 },
+  analysis: {
+    maxAttempts: 3,
+    timeoutMs: 5 * 60 * 1000,
+    retryBaseMs: 1000,
+    retryMaxMs: 60 * 1000,
+  },
   ...partial,
 });
 
