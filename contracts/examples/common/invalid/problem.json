@@ -1,0 +1,6 @@
+{
+  "type": "/problems/validation-failed",
+  "title": "요청 값을 확인해 주세요",
+  "status": 200,
+  "code": "validation-failed"
+}

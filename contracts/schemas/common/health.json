@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/common/health.json",
+  "title": "Health",
+  "description": "서비스 상태 응답. 하드웨어 연동 상태도 checks 항목으로 표현한다.",
+  "type": "object",
+  "required": ["status", "version", "time", "checks"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["ok", "degraded", "down"],
+      "description": "전체 상태. 하위 check 중 하나라도 down 이면 down, degraded 가 있으면 degraded."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "애플리케이션 버전(빌드 시 주입)."
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 UTC 시각."
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "status"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "검사 항목 이름(예: db, storage, device-link)."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ok", "degraded", "down", "skipped"]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "latencyMs": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/common/problem.json",
+  "title": "Problem",
+  "description": "RFC 9457 Problem Details 기반의 공통 오류 표현. 도메인별 확장 멤버를 허용한다.",
+  "type": "object",
+  "required": ["type", "title", "status", "code"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "format": "uri-reference",
+      "description": "오류 유형을 식별하는 URI. 확장자 없이 상대 경로를 쓰는 것을 권장한다(예: /problems/validation-failed)."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "사람이 읽는 짧은 오류 요약. 로그/모니터링의 1차 식별자로 쓰지 않는다."
+    },
+    "status": {
+      "type": "integer",
+      "minimum": 400,
+      "maximum": 599,
+      "description": "HTTP 상태 코드와 동일한 값."
+    },
+    "detail": {
+      "type": "string",
+      "description": "이 발생 건에 대한 설명. 사용자 노출을 전제로 하지 않는다."
+    },
+    "instance": {
+      "type": "string",
+      "format": "uri-reference",
+      "description": "해당 오류가 발생한 요청 경로."
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "description": "기계 판독용 오류 코드. 클라이언트 분기 처리는 이 값을 기준으로 한다."
+    },
+    "traceId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "로그/추적 상관관계 ID."
+    },
+    "retryable": {
+      "type": "boolean",
+      "description": "동일 요청 재시도가 의미 있는지 여부."
+    },
+    "errors": {
+      "type": "array",
+      "description": "필드 단위 검증 실패 목록.",
+      "items": {
+        "type": "object",
+        "required": ["pointer", "code"],
+        "properties": {
+          "pointer": {
+            "type": "string",
+            "description": "RFC 6901 JSON Pointer. 요청 본문 위치를 가리킨다(예: /title)."
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,9 @@
+{
+  "status": "ok",
+  "version": "0.1.0",
+  "time": "2026-11-13T07:00:00Z",
+  "checks": [
+    { "name": "db", "status": "ok", "latencyMs": 3 },
+    { "name": "device-link", "status": "skipped", "detail": "실물 하드웨어 미연결 (HW-PENDING)" }
+  ]
+}

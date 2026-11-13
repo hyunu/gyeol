@@ -1,0 +1,169 @@
+openapi: 3.1.0
+info:
+  title: GYEOL API (가칭)
+  version: 0.1.0-draft
+  summary: 추모/기념 서비스의 공통 API 계약 초안
+  description: |
+    본 문서는 **스펙 확보 전 공통 계층 골격**이다. 도메인 엔드포인트는
+    `MEMORIAL_PROJECT_SPEC.md` 확정 후 추가한다.
+
+    ## 공통 규약
+    - 모든 응답 본문은 `application/json` 이다. 오류는 `application/problem+json`.
+    - 시각은 RFC 3339 **UTC** (`Z` 접미사)로만 주고받는다.
+    - 식별자는 불투명 문자열(opaque string)이며 형식에 의존하지 않는다.
+    - 경로 버전: `/api/v{n}`. 비호환 변경 시 버전을 올린다.
+    - 목록 응답은 `Page` 봉투를 쓴다. (page 는 1부터)
+    - 오류 분기는 `title` 이 아니라 `code` 로 한다.
+  contact:
+    name: GYEOL
+  license:
+    name: UNLICENSED
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: http://localhost:8080
+    description: 로컬 개발
+  - url: https://api.example.invalid
+    description: 운영(미확정 — OPEN-004)
+tags:
+  - name: system
+    description: 운영/상태 확인
+  - name: meta
+    description: 서비스 메타 정보
+x-gyeol-provisional: true
+x-gyeol-spec-source: MEMORIAL_PROJECT_SPEC.md (미확보)
+
+paths:
+  /healthz:
+    get:
+      operationId: getHealth
+      tags: [system]
+      summary: 서비스 상태 확인
+      description: |
+        로드밸런서/모니터링용 상태 확인. 인증이 필요 없다.
+        하드웨어 연동 상태는 `checks` 항목으로 노출하되, 실물 검증 전에는
+        `skipped` 로 표기한다.
+      security: []
+      responses:
+        "200":
+          description: 정상 또는 일부 저하
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "../schemas/common/health.json"
+              examples:
+                ok:
+                  summary: 정상 + 하드웨어 미연결(skipped)
+                  value:
+                    status: ok
+                    version: 0.1.0
+                    time: "2026-11-13T07:00:00Z"
+                    checks:
+                      - name: db
+                        status: ok
+                        latencyMs: 3
+                      - name: device-link
+                        status: skipped
+                        detail: 실물 하드웨어 미연결 (HW-PENDING)
+        "503":
+          description: 서비스 불가
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "../schemas/common/health.json"
+
+  /api/v1/info:
+    get:
+      operationId: getServiceInfo
+      tags: [meta]
+      summary: 서비스 메타 정보
+      description: 클라이언트가 호환성을 확인하기 위한 최소 정보.
+      security: []
+      responses:
+        "200":
+          description: 서비스 정보
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceInfo"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: |
+        미확정(OPEN-004). 인증 방식 확정 전까지 보호된 엔드포인트를 추가하지 않는다.
+
+  headers:
+    NoStore:
+      description: 상태 응답은 캐시하지 않는다.
+      schema:
+        type: string
+        const: no-store
+
+  schemas:
+    ServiceInfo:
+      type: object
+      required: [name, apiVersion, contractVersion, provisional]
+      properties:
+        name:
+          type: string
+          const: gyeol
+        apiVersion:
+          type: string
+          pattern: "^v[0-9]+$"
+          description: URL 경로에 쓰이는 주 버전.
+        contractVersion:
+          type: string
+          pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+"
+          description: 본 계약 문서의 버전.
+        provisional:
+          type: boolean
+          description: 스펙 확보 전 임시 계약이면 true.
+        capabilities:
+          type: array
+          description: 서버가 제공하는 기능 플래그. 확정 전에는 비어 있을 수 있다.
+          items:
+            type: string
+      additionalProperties: false
+
+  responses:
+    BadRequest:
+      description: 요청 형식 오류
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/common/problem.json"
+    NotFound:
+      description: 대상 없음
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/common/problem.json"
+    Conflict:
+      description: 상태 충돌
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/common/problem.json"
+    UnprocessableEntity:
+      description: 의미상 검증 실패
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/common/problem.json"
+    InternalError:
+      description: 서버 내부 오류
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/common/problem.json"

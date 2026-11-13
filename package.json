@@ -1,0 +1,20 @@
+{
+  "name": "gyeol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GYEOL (가칭) — 추모/기념 프로젝트. 계약 우선(contract-first) 기반 저장소.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tools/test/*.test.mjs",
+    "validate": "node tools/validate-contracts.mjs",
+    "check": "npm run validate && npm test"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "^10.1.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

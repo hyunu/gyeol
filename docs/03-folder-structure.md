@@ -1,0 +1,75 @@
+# 프로젝트 폴더 구조 (초안 v0.1)
+
+- 상태: **잠정** — 애플리케이션 스택 미확정(OPEN-002)
+- 원칙: 이미 만든 자산(문서, 계약, 검증 도구)은 위치를 바꾸지 않는다.
+
+## 1. 현재 구조 (실제)
+
+```text
+gyeol/
+├── .github/workflows/ci.yml     # 계약 검증 + 테스트
+├── .editorconfig
+├── .gitignore
+├── Makefile                     # install / check / validate / test
+├── package.json                 # 계약 검증 도구 전용 (앱 런타임 아님)
+├── README.md
+├── MEMORIAL_PROJECT_SPEC.md     # 기준 문서 (초안, 사용자 확정 필요)
+├── docs/
+│   ├── 00-repository-analysis.md
+│   ├── 01-requirements.md
+│   ├── 02-architecture.md
+│   ├── 03-folder-structure.md
+│   ├── 04-development-plan.md
+│   ├── 05-api-conventions.md
+│   └── adr/
+│       └── 0001-contract-first.md
+├── contracts/
+│   ├── README.md
+│   ├── openapi/openapi.yaml
+│   ├── schemas/common/{problem,page,health}.json
+│   └── examples/common/{valid,invalid}/*.json
+└── tools/
+    ├── validate-contracts.mjs
+    └── test/contracts.test.mjs
+```
+
+## 2. 목표 구조 (스택 확정 후 채움)
+
+```text
+gyeol/
+├── contracts/              # L0. 언어 중립 계약 (현재 구현됨)
+├── packages/
+│   ├── domain/             # L1. 순수 도메인 (외부 의존 0)
+│   ├── application/        # L2. 유스케이스 + 포트 정의
+│   └── adapters/
+│       ├── persistence/    # L3
+│       ├── media/
+│       ├── device-fake/    # 테스트용
+│       ├── device-sim/     # 개발용 시뮬레이터
+│       └── device-real/    # 실물 (HW-PENDING)
+├── apps/
+│   ├── api/                # L4. HTTP 엣지
+│   └── admin/              # 운영 도구 (필요 시)
+├── tools/                  # 계약 검증/코드 생성/린트
+└── docs/
+```
+
+> 위 트리는 **제안**이다. 모노레포 여부, 패키지 네이밍, 언어는 OPEN-002 결정에 따른다.
+> 지금 디렉터리를 미리 만들지 않는다(빈 껍데기는 탐색 비용만 늘린다).
+
+## 3. 명명 규칙
+
+| 대상 | 규칙 | 예 |
+| --- | --- | --- |
+| 문서 | `NN-kebab-case.md`, 번호는 의존 순서 | `05-api-conventions.md` |
+| ADR | `NNNN-kebab-title.md` | `0001-contract-first.md` |
+| 스키마 | `kebab-case.json`, `$id` 는 `https://gyeol.local/schemas/<그룹>/<이름>.json` | `common/problem.json` |
+| 예제 | 스키마 파일명과 동일해야 검증기가 매칭 | `examples/common/valid/page.json` |
+| 오류 코드 | `UPPER_SNAKE_CASE` | `VALIDATION_FAILED` |
+
+## 4. 구조 규칙
+
+1. `contracts/` 는 특정 언어에 종속되지 않는다. 코드 생성물을 커밋하지 않는다.
+2. `docs/` 는 구현보다 앞서 갱신한다(설계 우선). 결정은 `docs/adr/` 에 남긴다.
+3. `tools/` 는 개발 편의 도구이며 제품 런타임에 포함되지 않는다.
+4. 계층별 디렉터리는 스택 확정 후 생성하고, 생성 즉시 의존 방향 린트를 붙인다.

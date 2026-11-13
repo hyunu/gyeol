@@ -1,0 +1,13 @@
+{
+  "type": "/problems/validation-failed",
+  "title": "요청 값을 확인해 주세요",
+  "status": 422,
+  "detail": "title 은 비어 있을 수 없습니다.",
+  "instance": "/api/v1/memorials",
+  "code": "VALIDATION_FAILED",
+  "traceId": "01J9Z9YQ7K3M4N5P6Q7R8S9T0V",
+  "retryable": false,
+  "errors": [
+    { "pointer": "/title", "code": "REQUIRED", "message": "필수 항목입니다." }
+  ]
+}
