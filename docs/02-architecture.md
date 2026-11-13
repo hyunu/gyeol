@@ -31,7 +31,8 @@ flowchart LR
 ```
 
 - 확정: API 단일 진입점, 영속 저장소 분리, 미디어 분리, 하드웨어는 교체 가능한 경계 뒤.
-- 미확정: AI provider 선택(ENV-05), 인증 방식(D-01).
+- 확정: 인증은 Apple 로그인 + 서버 세션(ADR-0010).
+- 미확정: AI provider 선택(ENV-05).
 
 ## 3. 계층 구조
 
@@ -111,7 +112,7 @@ sequenceDiagram
 | 페이지 봉투 | 확정 | `page.json` |
 | 하드웨어 포트 존재 | 확정 | `packages/hardware-adapter/port.ts` |
 | 언어/런타임/DB/배포 | **확정** (Node/TS, PostgreSQL+pgvector, Object Storage) | 스펙 v1.0 §3 |
-| 인증/권한 모델 | **미확정** | D-01 / OPEN-005 |
+| 인증/권한 모델 | **확정** — Apple 로그인 + 서버 세션 (구현 W-19) | ADR-0010 |
 | 도메인 엔티티 | **확정** | `docs/10-domain-model.md` v1.1 |
 
 ## 8. 원본·파생 계층 분리 (Phase 1 확정)

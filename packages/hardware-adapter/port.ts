@@ -11,8 +11,8 @@ export interface CapturedRecording {
   endedAt: Date;
   durationMs: number;
   /**
-   * D-04 제안: 기기 저장·전송은 `wav_ima_adpcm` (ADR-0006, 승인 대기).
-   * Phase 1 테스트 기준은 계속 `wav_pcm_s16le` 이다.
+   * D-04 확정: 기기 저장·전송은 `wav_ima_adpcm` (ADR-0006).
+   * 테스트 기준(Fake 기기)은 `wav_pcm_s16le` 이다.
    */
   codec: string;
   sampleRateHz: number;

@@ -122,7 +122,7 @@ erDiagram
 | `ended_at` | timestamptz | N | CHECK > started_at | |
 | `captured_offset_min` | smallint | Y | CHECK -840..840 | 기기 로컬 오프셋(표시용) |
 | `duration_ms` | integer | N | CHECK > 0 | |
-| `codec` | text | N | 인덱스 대상, **CHECK 없음** (M-02) | 값 예: `wav_pcm_s16le`, `wav_ima_adpcm`, `opus_ogg_16k`. ADR-0006 참조 |
+| `codec` | text | N | 인덱스 대상, **CHECK 없음** (M-02) | 값 예: `wav_ima_adpcm`(기기 기본), `wav_pcm_s16le`(테스트 기준). ADR-0006 참조 |
 | `codec_params` | jsonb | Y | | bit depth, frame size 등 코덱별 파라미터 |
 | `sample_rate_hz` | integer | N | CHECK > 0 | 후보: 16000 |
 | `channels` | smallint | N | CHECK > 0 | 후보: 1 |
@@ -525,7 +525,8 @@ erDiagram
    ↓
 [파생] conversations 이하 (원본과 분리 저장, 재생성 가능)
    ↓
-[보존] 정책에 따라 원본 purge / 파생만 삭제 / 전체 삭제 / 내보내기
+[보존] 분석 종료 후 30일 → 원본 purge (파생 유지, ADR-0011)
+        그 외 삭제·내보내기는 사용자 요청(W-25)
 ```
 
 ### 8.1 삭제 전파표
@@ -533,7 +534,7 @@ erDiagram
 | 요청 | recordings | conversations 이하 | 오브젝트 | 비고 |
 | --- | --- | --- | --- | --- |
 | 파생 데이터만 삭제 | 유지 | 삭제 + 연결 행 삭제 | 유지 | 재분석 가능 |
-| 원본 삭제(5조건 충족) | `purged` | 유지 | 삭제 | 요약·검색은 남음(D-11) |
+| 원본 삭제(5조건 충족·30일 경과) | `purged` | 유지 | 삭제 | 요약·검색은 남음(D-11 확정) |
 | 녹음 전체 삭제 | soft delete + purge | 연결 행만 삭제 | 삭제 | 대화는 다른 녹음과 연결돼 있으면 유지 |
 | 인물 삭제 | 유지 | 클러스터 `person_id=NULL` | 유지 | 임베딩 삭제 |
 | 계정 삭제 | 전부 purge | 전부 purge | 전부 삭제 | 절차 후 실행 |
@@ -550,7 +551,7 @@ erDiagram
 | 항목 | 설계 |
 | --- | --- |
 | 전송 구간 | TLS 필수. 업로드 URL 은 짧은 만료의 서명 URL |
-| 저장 암호화 | 오브젝트 스토리지 SSE. DB 컬럼 암호화 범위 TBD(D-13) |
+| 저장 암호화 | 오브젝트 스토리지 SSE + DB 저장 암호화. 컬럼 단위 범위는 TBD(D-13) |
 | 접근 제어 | 모든 조회는 `user_id` 스코프. 소유자 외 접근 404(존재 은닉) |
 | 음성 임베딩 | 생체 정보로 취급 — 원본과 별도 삭제, 내보내기 제외 권장 |
 | 동의 | 주변인 녹음 고지(기기 LED/음성) — 제품·법무 요구, D-14 |
@@ -558,23 +559,25 @@ erDiagram
 
 ---
 
-## 10. TBD 목록 (임의 확정하지 않음)
+## 10. 결정 목록 (TBD 포함)
 
-| ID | 항목 | 필요한 이유 | 제안 기본값(승인 시) |
+확정된 항목은 ADR 을 근거로 남긴다. TBD 는 임의 확정하지 않는다.
+
+| ID | 항목 | 필요한 이유 | 상태·근거 |
 | --- | --- | --- | --- |
-| D-01 | 인증/가입 방식 | `users.auth_subject` 의미 | TBD |
+| D-01 | 인증/가입 방식 | `users.auth_subject` 의미 | **확정: Apple 로그인 + 서버 세션** — `docs/adr/0010-authentication-apple-session.md` |
 | D-02 | 다중 기기·가족 공유 | `devices.user_id` 범위 | 1인 1기기 |
 | D-03 | Unknown Speaker 표현 | person 행 생성 여부 | 클러스터 NULL 방식(본 설계) |
-| D-04 | 오디오 코덱 | `codec`, 용량 | **제안: `wav_ima_adpcm` (16k mono), 테스트 기준 `wav_pcm_s16le` 유지** — `docs/adr/0006-audio-codec.md`, 승인 대기 |
-| D-05 | 임베딩 모델·차원 | pgvector 컬럼 차원 | 화자 256 / 텍스트 768 |
+| D-04 | 오디오 코덱 | `codec`, 용량 | **확정: 기기 `wav_ima_adpcm` (16k mono), 테스트 기준 `wav_pcm_s16le` 유지** — `docs/adr/0006-audio-codec.md` |
+| D-05 | 임베딩 모델·차원 | pgvector 컬럼 차원 | **확정: 화자 256 / 텍스트 768**, 모델은 W-18 — `docs/adr/0009-embedding-dimensions.md` |
 | D-06 | 청크 크기·세션 만료 | 이어받기 단위 | 256 KiB / 24h |
 | D-07 | 한국어 검색 방식 | FTS 토크나이저 | `simple` + 키워드 배열 |
-| D-08 | 계정 삭제 절차·유예 | purge 정책 | 30일 유예 |
+| D-08 | 원본 음성 보존 | purge 정책 | **확정: 분석 종료 후 30일 뒤 원본 purge, 파생 유지** — `docs/adr/0011-retention-30-days.md` |
 | D-09 | VAD 파라미터 | `devices.config` | TBD |
 | D-10 | 분석 이력 보관 | 재분석 이력 | 최신본만 |
-| D-11 | 원본 purge 후 파생 유지 | 삭제 전파 | 파생 유지 |
+| D-11 | 원본 purge 후 파생 유지 | 삭제 전파 | **확정: 파생 유지** — `docs/adr/0011-retention-30-days.md` |
 | D-12 | 화자 제안 임계값 | `suggested` 가드 | **실험값** 0.80 / margin 0.05 — `speaker_id_thresholds` 로 모델별 설정 |
-| D-13 | DB 암호화 범위 | 개인정보 | 전화번호류만 |
+| D-13 | DB 암호화 범위 | 개인정보 | **TBD** (제안: 전화번호류만. W-25에서 결정) |
 | D-14 | 주변인 녹음 동의 | 법적 요구 | TBD |
 | D-15 | 감사 로그 | 규제 대응 | Phase 2 |
 
@@ -593,8 +596,9 @@ erDiagram
 
 추가 원칙:
 
-- D-04, D-05, D-08, D-12, D-14 등은 기술 검증 전 최종 확정하지 않는다. 제안값은
-  **실험값/설정값**으로 취급하며 근거와 변경 가능성을 문서에 남긴다.
+- 확정된 결정(D-01·D-04·D-05·D-08·D-11)은 ADR 을 근거로 §10 에 남긴다.
+- 아직 확정하지 않은 항목(D-12·D-13·D-14·D-15 등)은 **실험값/설정값/TBD** 로 표기하고,
+  근거와 변경 가능성을 문서에 남긴다.
 - `X-User-Id` 임시 헤더는 **로컬 개발 환경에서만** 허용하고, 외부 접근 환경에서는 차단한다
   (`GYEOL_ENV != local` → 401). ADR-0003 참조.
 
@@ -604,3 +608,4 @@ erDiagram
 | --- | --- | --- |
 | 1.0 | 2026-11-13 | 최초 설계안 |
 | 1.1 | 2026-11-13 | 승인 반영: M-01(연결 테이블), M-02(코덱 유연화), M-03(모델별 임계값), M-04(삭제 5조건) |
+| 1.2 | 2026-11-14 | `analysis_jobs`(§3.15, §6.8, ADR-0007), D-01·D-04·D-05·D-08·D-11 확정(ADR-0006·0009·0010·0011) |

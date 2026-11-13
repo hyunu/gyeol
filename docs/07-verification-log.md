@@ -141,6 +141,18 @@ npm run test:s3
 
 문서: `docs/11-backup-restore.md` (운영 절차·한계·오브젝트 스토리지 별도 백업).
 
+## 2.6 결정 반영 (2026-11-14)
+
+코드 변경 없이 스키마·정책 기준을 확정했다. 근거는 ADR 이다.
+
+| 결정 | 내용 | 근거 |
+| --- | --- | --- |
+| D-04 | 기기 `wav_ima_adpcm`, 테스트 기준 `wav_pcm_s16le` | ADR-0006 |
+| D-05 | 화자 256 / 텍스트 768, 모델은 W-18 | ADR-0009 |
+| D-01 | Apple 로그인 + 불투명 서버 세션(30일) | ADR-0010 |
+| D-08·D-11 | 분석 종료 후 30일 원본 purge, 파생 유지 | ADR-0011 |
+| D-13·D-15 | 암호화 범위·감사 로그는 TBD | W-13 PARTIAL |
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |
@@ -149,9 +161,9 @@ npm run test:s3
 | ENV-02 | PostgreSQL `Store` 어댑터 | — | **해소 (2026-11-14)** — `PostgresStore` + `tests/db` 14건 통과 |
 | ENV-03 | 실물 웨어러블(VAD·PDM·microSD·BLE) | 하드웨어 미확보 | 펌웨어 테스트 + `HW-PENDING` 절차 |
 | ENV-04 | iOS CoreBluetooth/AVFoundation 실연동 | 기기·앱 미개발 | 실기기 시나리오 |
-| ENV-05 | 실제 STT/화자분리/요약 provider | D-05 등 미확정 | provider 어댑터 계약 테스트 |
+| ENV-05 | 실제 STT/화자분리/요약 provider | provider 미선정(W-18) | provider 어댑터 계약 테스트 |
 | ENV-06 | 한국어 전문검색 토크나이저(D-07) | 미확정 | 검색 품질 측정 |
-| ENV-07 | pgvector 인덱스(HNSW) 튜닝 | 차원 미확정(D-05) | 부하 테스트 |
+| ENV-07 | pgvector 인덱스(HNSW) 튜닝 | 차원 확정(256/768), 모델·부하 미측정 | W-18 이후 부하 테스트 |
 | ENV-08 | 실제 S3/AWS(운영) | MinIO 로만 검증 | 운영 버킷·권한·수명주기 리허설 (W-26) |
 
 ## 3.1 DB 검증 결과 (2026-11-14)

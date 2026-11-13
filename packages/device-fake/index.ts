@@ -73,7 +73,7 @@ export class FakeWearable implements HardwareAdapter {
   }
 }
 
-/** 16kHz mono 16bit PCM WAV. 테스트 기준 포맷(D-04 미확정). */
+/** 16kHz mono 16bit PCM WAV. 테스트 기준 포맷(D-04 확정, ADR-0006). */
 export function buildWavPcm16Mono(sampleRate: number, durationMs: number, toneHz: number): Buffer {
   const sampleCount = Math.max(1, Math.round((sampleRate * durationMs) / 1000));
   const dataSize = sampleCount * 2;

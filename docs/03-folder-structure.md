@@ -56,7 +56,7 @@ gyeol/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~11, adr/0001~0008)
+├── docs/ (00~11, adr/0001~0011)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```
 
