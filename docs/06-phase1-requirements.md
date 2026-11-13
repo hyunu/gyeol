@@ -12,7 +12,7 @@
 | R-021 | 스마트폰이 없어도 microSD 에 독립 저장을 계속한다. | Fake 기기 오프라인 누적 테스트 통과 | `HW-PENDING` (Fake 검증 완료) |
 | R-022 | BLE 전송은 ACK·재전송·이어받기를 지원한다. | Fake BLE 중단/재개 테스트 통과 | `HW-PENDING` (Fake 검증 완료) |
 | R-023 | 폰은 STT·화자분리·화자식별·대화구성·요약·정보추출·검색데이터 생성 파이프라인을 실행한다. | Fake AI Pipeline + 비동기 작업 큐(ADR-0007)로 전 구간 통과, 실제 provider 는 ENV-05 | `WIP` |
-| R-024 | 결과는 서버에 저장되고 웹에서 날짜별·인물별·요약·검색이 가능하다. | API 완료(통합 테스트), 웹 대시보드 미착수 | `WIP` |
+| R-024 | 결과는 서버에 저장되고 웹에서 날짜별·인물별·요약·검색이 가능하다. | API 완료, 웹 대시보드 골격(`apps/web`) — 날짜 타임라인·인물 필터·키워드 검색·요약/전문. E2E 자동화는 W-17 | `WIP` |
 | R-025 | 하드웨어 의존 코드는 Hardware Adapter 인터페이스 뒤에 두고 Fake Adapter 로 테스트한다. | `packages/hardware-adapter/port.ts` + Fake 통과 | `DONE` |
 | R-026 | AI 엔진은 Provider Adapter 구조로 교체 가능해야 한다. | `AiPipeline` 포트 + Fake 구현 | `DONE` |
 | R-027 | OpenAPI 계약을 먼저 정의하고 구현을 자동 검증한다. | `npm run check` (계약+계약테스트) | `DONE` |

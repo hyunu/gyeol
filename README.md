@@ -16,6 +16,7 @@
 | OpenAPI 계약 + 스키마 11종 | 완료 (13 오퍼레이션) |
 | Recording / Conversation API | 완료 (메모리·PostgreSQL 저장소) |
 | 비동기 분석 작업 큐 | 완료 (ADR-0007, 재시도·타임아웃·임차 회수) |
+| 웹 대시보드 (React) | 완료 — 타임라인·상세·인물 필터·키워드 검색 (`apps/web`) |
 | Fake Hardware / Fake Mobile | 완료 |
 | 통합·계약 테스트 | 완료 — 26 tests |
 | PostgreSQL 마이그레이션·제약 검증 | 완료 (15 테이블, `npm run db:checks`) |
@@ -41,6 +42,16 @@ GYEOL_STORE=postgres npm start
 npm run db:checks  # 제약·인덱스 실동작 검증
 npm run test:db    # Store·작업 큐 테스트 (14 tests)
 ```
+
+웹 대시보드:
+
+```bash
+npm run web:install
+npm run web:dev      # http://127.0.0.1:5173 (API 8080 프록시)
+npm run web:build    # 타입 검사 + 프로덕션 빌드
+```
+
+화면 타입은 OpenAPI 계약에서 생성한다. 계약을 바꾸면 `npm run web:api-types` 로 갱신한다.
 
 로컬 개발은 임시 인증 헤더를 쓴다(ADR-0003).
 
@@ -112,6 +123,6 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 작업 순서와 완료 조건은 [`docs/08-work-order.md`](docs/08-work-order.md) 를 따른다.
 
 1. 스키마 결정 — D-05(임베딩 차원), D-04(코덱), D-01(인증), D-08(보존) (W-10~W-13)
-2. 오브젝트 스토리지 S3/MinIO 어댑터 (W-14) · 웹 대시보드 (W-16·W-17)
+2. 오브젝트 스토리지 S3/MinIO 어댑터 (W-14) · 검색 UI E2E (W-17)
 3. 실제 AI provider 어댑터 (W-18)
 4. 실물 웨어러블 + iOS BLE 연동 (W-20~W-24, `HW-PENDING`)

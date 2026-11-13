@@ -1,7 +1,7 @@
 # 검증 기록 (Phase 1)
 
 - 최종 실행: 2026-11-14
-- 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db`
+- 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db` · `web:build`
 - 결과: **26 tests / pass 26 / fail 0**, DB **14 tests / pass 14 / fail 0**,
   계약 스키마 11 · 예제 17 · OpenAPI 유효, DB 마이그레이션(2건)·제약 검사 통과
 
@@ -65,6 +65,28 @@
 
 - `numeric` 이 문자열이 아닌 `number` 로, `int8` 이 `number` 로 매핑되는 것을 단언한다.
 - 검색은 MemoryStore 와 같은 규칙(키워드 1.0 / 코사인 유사도, 임계값 0.35, 최신순)을 쓴다.
+
+## 2.2 웹 대시보드 (W-16, 2026-11-14)
+
+`apps/web` — React 19 + Vite. 화면 타입은 OpenAPI 계약에서 생성한다.
+
+| 검증 | 근거 | 결과 |
+| --- | --- | --- |
+| 계약 타입 재생성 | `npm run web:api-types` → `src/api/schema.ts` | 통과 |
+| 타입 검사 + 빌드 | `npm run web:build` (`tsc --noEmit` + `vite build`) | 통과 (21 modules) |
+| 계약-타입 드리프트 | CI 에서 재생성 후 `git diff --exit-code` | 구성됨 |
+| 레이아웃 | 1440 / 1024 / 900 / 390 px 렌더 확인 | 통과 |
+| 대비 | `--ink-3` 를 5.1:1 로 조정 (한지 바탕) | 통과 |
+| 키보드/보조기기 | skip link, `:focus-visible`, 검색 label, `aria-pressed`·`aria-current`, 상태 `role="status|alert"` | 확인 |
+| 터치 | 입력·버튼·인물 칩 최소 44px | 확인 |
+| 모션 | `prefers-reduced-motion` 에서 스켈레톤 정지, `prefers-reduced-transparency` 에서 그레인 제거 | 확인 |
+
+구현한 상태: 첫 로딩 스켈레톤 · 기존 목록 유지 갱신 · 첫 사용 빈 상태 · 검색 결과 없음 · 오류+재시도 ·
+상세 미선택/로딩/오류 · `partial` 대화 안내 · 할 일 낙관적 갱신/실패 롤백.
+필터·선택은 URL(`q`, `person`, `id`)에 반영된다.
+
+> 브라우저 E2E 자동화는 아직 없다. W-17 에서 날짜·인물·키워드 검색 시나리오로 추가한다.
+> 그때까지 R-024 는 `WIP` 로 둔다.
 
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 

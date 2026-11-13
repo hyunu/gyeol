@@ -20,6 +20,10 @@ gyeol/
 │       │   ├── storage/local-disk.ts
 │       │   └── ai/fake-pipeline.ts
 │       └── http/                   # L4: 라우팅·검증·problem+json·DTO
+├── apps/web/                       # React 대시보드 (계약 타입 생성, Vite)
+│   ├── src/api/schema.ts           # OpenAPI 에서 생성 (커밋)
+│   ├── src/components/             # Timeline · Detail · Sidebar
+│   └── src/styles.css              # Warm Editorial 토큰
 ├── packages/
 │   ├── hardware-adapter/port.ts    # 웨어러블 포트 (실물/Fake 공통)
 │   ├── device-fake/index.ts        # WAV 생성·로컬 저장·전송 ACK
