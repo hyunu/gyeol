@@ -16,7 +16,8 @@
 | RX (폰→기기) | `8f2d0003-7b1e-4c3a-9f4d-5a6b7c8d9e01` | Write Without Response |
 
 - 폰은 TX 의 CCCD 를 구독한다.
-- MTU 247 권장. 프레임 payload 권장값은 **240바이트**(ATT 헤더 3 + 프레임 헤더 16 여유).
+- MTU 247 권장. BLE 알림은 **244바이트(MTU 247 - ATT 3)까지만** 전달되므로, 프레임 전체가 244바이트를 넘지 않아야 한다.
+  DATA 프레임은 `16(헤더) + 8(오프셋) + chunk` 이므로 **chunk 220바이트**가 기본값이다.
 - 프레임 하나가 characteristic 값 하나에 대응한다. 분할은 프레임 계층이 담당한다.
 
 ## 2. 프레임
@@ -69,7 +70,7 @@
                          ◀─────  HELLO_ACK
   OPEN_REQ(id)           ─────▶
                          ◀─────  OPEN_RES(startOffset)
-  DATA(offset, bytes)    ─────▶   (창 크기 4)
+  DATA(offset, bytes)    ─────▶   (창 크기 8)
                          ◀─────  ACK(receivedBytes)
   ...                            (offset == receivedBytes 일 때만 저장)
   COMPLETE_REQ(size, sha)─────▶
@@ -88,13 +89,16 @@
 
 | 파라미터 | 값 | 의미 |
 | --- | ---: | --- |
-| `chunkSizeBytes` | 240 | DATA 1개 최대 바이트(OPEN_RES 로 협상) |
-| `windowFrames` | 4 | ACK 없이 보낼 수 있는 DATA 수 |
+| `chunkSizeBytes` | 220 | DATA 1개 최대 바이트(OPEN_RES 로 협상, 프레임 ≤ 244) |
+| `windowFrames` | 8 | ACK 없이 보낼 수 있는 DATA 수 |
 | ACK timeout | 1000ms | 이 시간 동안 ACK 없으면 `onTimeout` |
 | `maxRetries` | 5 | 초과 시 전송 실패 |
 
-- ACK 는 누적이므로, 송신측은 ACK 를 받으면 `inFlight` 를 비우고 `receivedBytes` 부터 다시 보낸다.
-  (수신측이 버린 프레임은 다시 오지 않으므로 재전송이 필요하다.)
+- ACK 는 누적이다. 송신측은 `nextOffset - acked` 가 창 크기를 넘지 않도록 DATA 를 보내고,
+  ACK 가 오면 그만큼 창을 채운다.
+- 수신측은 **매 프레임 ACK 하지 않아도 된다.** 8프레임(또는 LAST)마다 한 번 ACK 하면
+  BLE 왕복 횟수가 줄어 전송이 빨라진다. 실측에서 160KB 기준 28s → 14s 로 줄었다.
+- ACK 가 1초 이상 오지 않으면 송신측은 `acked` 지점부터 다시 보낸다(최대 6회).
 - **이어받기**: `OPEN_REQ` 에 대해 폰이 저장 중인 부분 파일 길이를 `startOffset` 으로 돌려준다.
   기기는 그 지점부터 DATA 를 보낸다. 폰 앱이 재시작돼도 부분 파일을 유지해야 한다.
 - 연결이 끊기면 진행 중인 전송은 `OPEN_REQ` 부터 다시 시작한다. 별도 재개 메시지는 없다.
@@ -140,5 +144,20 @@
 8. SHA 불일치 → mismatch
 9. 완료 파일 `LIST_RES` 메타데이터
 
-> 실제 PDM/BLE/microSD 펌웨어와 iOS CoreBluetooth 연동은 W-21~W-24 이며 `HW-PENDING` 이다.
-> 이 계약은 시뮬레이터로 검증됐지만, 실기기 타이밍·MTU·전원 차단 복구는 측정 전이다.
+## 9. 실기기 검증 (2026-11-14, ESP32-S3 개발 보드)
+
+스펙 대상은 XIAO nRF52840 Sense 이지만, 연결된 **ESP32-S3(8MB PSRAM)** 로 계약을 먼저 검증했다
+(`firmware/esp32s3/`).
+
+| 항목 | 결과 |
+| --- | --- |
+| PDM 녹음 | 5초 16kHz mono WAV 160,256 bytes 생성 |
+| 저장 | SD 없음 → LittleFS 폴백. 재부팅 후 파일 유지 |
+| BLE 전송 | 160,300 bytes, SHA-256 일치 |
+| 중단·재개 | 50,160 bytes에서 끊고 재접속 → 나머지부터 재개, 최종 SHA 일치 |
+| MTU | 알림 244 bytes(MTU 247). 청크 220 으로 프레임 244 이하 유지 |
+
+- 프레임이 244바이트를 넘으면 ESP32 BLE 스택이 알림을 잘라 CRC 가 깨진다. **청크 220** 은
+  이 제약에서 나온 값이다.
+- 전송 시간은 160KB 기준 약 14초(재개 포함). ACK 배칭과 창 8 적용 후 측정했다.
+- 실제 nRF52840·iOS CoreBluetooth·microSD 카드·VAD 는 아직 `HW-PENDING` 이다.

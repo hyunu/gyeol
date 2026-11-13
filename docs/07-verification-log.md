@@ -2,7 +2,7 @@
 
 - 최종 실행: 2026-11-14
 - 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db` · `test:s3` · `test:e2e` · `web:build`
-- 결과: **43 tests / pass 43 / fail 0**, DB **17 / 17**, S3 **7 / 7**, E2E **6 / 6**,
+- 결과: **49 tests / pass 49 / fail 0**, DB **17 / 17**, S3 **7 / 7**, E2E **6 / 6**, Swift **13 / 13**,
   계약 스키마 11 · 예제 17 · OpenAPI 유효, DB 마이그레이션(2건)·제약 검사 통과
 
 ## 1. 자동 검증 항목
@@ -151,7 +151,8 @@ npm run test:s3
 | D-05 | 화자 256 / 텍스트 768, 모델은 W-18 | ADR-0009 |
 | D-01 | Apple 로그인 + 불투명 서버 세션(30일) | ADR-0010 |
 | D-08·D-11 | 분석 종료 후 30일 원본 purge, 파생 유지 | ADR-0011 |
-| D-13·D-15 | 암호화 범위·감사 로그는 TBD | W-13 PARTIAL |
+| D-13 | 저장 암호화(at-rest)+TLS만, 앱 필드 암호화는 PII 추가 시 재검토 | ADR-0011 |
+| D-15 | 감사 로그는 W-25 최소 세트로 구현 | W-25 |
 
 ## 2.7 웹 E2E (W-17, 2026-11-14)
 
@@ -201,6 +202,38 @@ Playwright 로 실제 브라우저에서 검색·상세·모바일 전환을 검
 | 9 | 완료 파일 `LIST_RES` 메타데이터 | 동일 | 통과 |
 
 명세: `docs/12-ble-protocol.md`. 실기기 MTU·타이밍·전원 차단 복구는 `HW-PENDING`(W-21~W-24).
+
+## 2.10 AI provider 계약 (W-18, 2026-11-14)
+
+| # | 검증 | 근거 | 결과 |
+| --- | --- | --- | --- |
+| 1 | multipart 분석 요청(메타데이터+오디오)과 도메인 타입 변환 | `tests/ai-provider.test.ts` | 통과 |
+| 2 | embed 차원 검증, 잘못된 응답 거부 | 동일 | 통과 |
+| 3 | 5xx 재시도 가능 / 4xx 재시도 불가 | 동일 | 통과 |
+| 4 | 타임아웃·비JSON 응답 fail-closed | 동일 | 통과 |
+| 5 | `GYEOL_AI` fail-closed, Fake 와 HTTP 동일 포트 형태 | 동일 | 통과 |
+| 6 | 재시도 불가 오류는 분석 작업이 첫 시도에 실패 | `tests/async-analysis.test.ts` | 통과 |
+
+계약: `docs/13-ai-provider-contract.md`. 실제 vendor·지연·비용은 `ENV-05`.
+
+## 2.11 실기기·iOS (2026-11-14)
+
+연결된 **ESP32-S3 (8MB PSRAM)** 개발 보드와 Xcode 27.2 로 검증했다. 스펙 대상인
+nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
+
+| # | 검증 | 근거 | 결과 |
+| --- | --- | --- | --- |
+| 1 | PDM 5초 녹음 → WAV 160,256 bytes | `firmware/esp32s3` 시리얼 로그 | 통과 |
+| 2 | SD 없음 → LittleFS 폴백, 재부팅 후 파일 유지 | 동일 | 통과 |
+| 3 | BLE 160,300 bytes 전송, SHA-256 일치 | `tools/ble_probe.py` | 통과 |
+| 4 | 50,160 bytes 에서 중단 → 재접속 후 재개, 최종 SHA 일치 | 동일 | 통과 |
+| 5 | Swift 프레임·수신기·스트림 재조립 13 tests | `apps/ios/Packages/GyeolBLE` | 통과 |
+| 6 | iOS 앱 시뮬레이터 빌드(서명 없이) | `xcodebuild ... CODE_SIGNING_ALLOWED=NO` | 통과 |
+
+- MTU 247 에서 알림이 244바이트로 잘리므로 **청크 220** 으로 조정했다. 이전 240 은
+  프레임이 잘려 CRC 오류가 났다.
+- ACK 배칭·창 8 적용 후 160KB 전송이 약 28초 → 14초로 줄었다.
+- iOS 실기기 CoreBluetooth E2E, VAD, microSD 카드, nRF52840 포팅은 아직 `HW-PENDING`.
 
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 

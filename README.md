@@ -18,21 +18,25 @@
 | 비동기 분석 작업 큐 | 완료 (ADR-0007, 재시도·타임아웃·임차 회수) |
 | 웹 대시보드 (React) | 완료 — 타임라인·상세·인물 필터·키워드 검색 (`apps/web`) |
 | Fake Hardware / Fake Mobile | 완료 |
-| 통합·계약 테스트 | 완료 — 43 tests · E2E 6 tests |
+| 통합·계약 테스트 | 완료 — 49 tests · E2E 6 tests |
 | PostgreSQL 마이그레이션·제약 검증 | 완료 (15 테이블, `npm run db:checks`) |
 | PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
 | 오브젝트 스토리지 | 완료 — 로컬 디스크 + S3/MinIO (`GYEOL_STORAGE`), `test:s3` 7 tests |
 | 관측성 | 완료 — 요청 JSON 로그, `X-Trace-Id`, `GET /metrics` (`docs/09-observability.md`) |
 | 세션 인증 | 완료(서버) — Apple JWKS, Bearer/쿠키 세션, 소유자 스코프. iOS/웹 로그인 UI는 대기 |
 | BLE 프로토콜 | 완료 — GATT 프레임·ACK·재전송·이어받기 계약 + 시뮬레이터 (`docs/12-ble-protocol.md`) |
+| AI provider 계약 | 완료(계약) — HTTP 파이프라인·mock 계약 테스트 (`docs/13-ai-provider-contract.md`). 실제 vendor는 ENV-05 |
+| ESP32-S3 펌웨어 | 개발 변형 — PDM 녹음·BLE 전송·중단 재개 SHA 일치 (`firmware/esp32s3`) |
 | 백업/복구 | 완료 — `db:backup`·복구 리허설 통과 (`docs/11-backup-restore.md`) |
-| 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
+| 실물 웨어러블 | **HW-PENDING** — ESP32-S3 개발 보드로 PDM·BLE 전송·재개 검증 |
+| iOS 앱 | **PARTIAL** — 시뮬레이터 빌드·수신기 13 tests, 실기기 E2E 대기 |
+| 실제 AI provider | **ENV-05** — HTTP 계약·mock 테스트 완료 |
 
 ## 빠른 시작
 
 ```bash
 npm install
-npm run check      # 계약 + 타입 + 테스트 (43 tests)
+npm run check      # 계약 + 타입 + 테스트 (49 tests)
 npm start          # http://127.0.0.1:8080 (메모리 저장소)
 ```
 

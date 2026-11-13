@@ -21,12 +21,15 @@ gyeol/
 │       │   ├── storage/local-disk.ts
 │       │   ├── storage/s3.ts       # S3 호환 (ADR-0008)
 │       │   ├── ai/fake-pipeline.ts
+│       │   ├── ai/http-pipeline.ts # HTTP provider 계약 (W-18)
 │       │   └── identity/apple.ts   # Apple JWKS 검증 (ADR-0010)
 │       └── http/                   # L4: 라우팅·검증·problem+json·DTO
 ├── apps/web/                       # React 대시보드 (계약 타입 생성, Vite)
 │   ├── src/api/schema.ts           # OpenAPI 에서 생성 (커밋)
 │   ├── src/components/             # Timeline · Detail · Sidebar
 │   └── src/styles.css              # Warm Editorial 토큰
+├── apps/ios/                       # SwiftUI 앱 + GyeolBLE Swift Package (Enterprise 팀)
+├── firmware/esp32s3/               # ESP32-S3 개발 보드 펌웨어 (W-21/W-22)
 ├── packages/
 │   ├── ble-protocol/               # GATT 프레임·전송 상태 기계 (W-20)
 │   ├── hardware-adapter/port.ts    # 웨어러블 포트 (실물/Fake 공통)
@@ -54,6 +57,7 @@ gyeol/
 │   ├── async-analysis.test.ts      # 작업 큐·재시도·타임아웃·임차 회수
 │   ├── auth.test.ts                # 세션·소유자 스코프
 │   ├── ble-protocol.test.ts        # 프레임·재전송·이어받기
+│   ├── ai-provider.test.ts         # provider 계약·실패 경로
 │   ├── e2e/                        # Playwright 검색·상세·모바일
 │   ├── db/                         # PostgreSQL 패리티·작업 큐
 │   ├── s3/                         # S3 어댑터·전 구간
@@ -62,7 +66,8 @@ gyeol/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~12, adr/0001~0011)
+├── docs/ (00~13, adr/0001~0011)
+├── tools/ (codec 측정, BLE 프로브는 firmware/esp32s3/tools)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```
 

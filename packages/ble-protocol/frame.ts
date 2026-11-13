@@ -2,7 +2,7 @@
  * GYEOL BLE 프레임 코덱 (W-20).
  *
  * GATT characteristic 값 하나에 프레임 하나를 담는다. 프레임은 16바이트 헤더와
- * 최대 512바이트 payload 로 구성된다. 권장 payload 는 240바이트(MTU 247)다.
+ * 최대 512바이트 payload 로 구성된다. 권장 payload 는 220바이트(MTU 247 - ATT 3 - 헤더 16 - 오프셋 8)다.
  *
  * 헤더
  *   0..1   magic "GY"
@@ -20,7 +20,7 @@ export const PROTOCOL_VERSION = 1;
 export const HEADER_BYTES = 16;
 export const MAX_PAYLOAD_BYTES = 512;
 export const MAX_FRAME_BYTES = HEADER_BYTES + MAX_PAYLOAD_BYTES;
-export const RECOMMENDED_CHUNK_BYTES = 240;
+export const RECOMMENDED_CHUNK_BYTES = 220;
 
 export const FLAG_LAST = 0x01;
 

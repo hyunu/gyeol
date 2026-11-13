@@ -105,7 +105,7 @@ flowchart LR
 | 산출물 | `DevicePort` 구현 3종 중 fake/simulated, BLE GATT 프레임 계약(`packages/ble-protocol`), 장애 주입(지연/단절/오류) |
 | 테스트 | BLE/HTTP 중단·재개, 세션 만료 후 재전송 |
 | 완료 조건 | 실물 없이 E2E 시나리오 통과 |
-| 상태 | **완료(Fake)** — 실물 어댑터는 Phase 7 `HW-PENDING` |
+| 상태 | **부분 완료** — Fake + ESP32-S3 개발 보드. nRF52840·microSD·VAD는 Phase 7 `HW-PENDING` |
 
 ## Phase 6 — MVP 통합
 
@@ -116,7 +116,7 @@ flowchart LR
 | 산출물 | 데모 시나리오, 운영 문서, 릴리스 체크리스트, 백업/복구 절차 |
 | 테스트 | 수용 테스트(스펙 기준), 부하/지연 목표 확인 |
 | 완료 조건 | 스펙의 MVP 수용 기준 전부 통과 |
-| 상태 | **WIP** — 서버 API·웹 대시보드·검색 E2E 완료, iOS 앱 미착수 |
+| 상태 | **WIP** — 서버·웹·검색 E2E 완료, iOS 앱 스캐폴드(시뮬레이터 빌드)·실기기 대기 |
 
 ## Phase 7 — 실물 하드웨어 검증
 
