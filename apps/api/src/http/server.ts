@@ -5,7 +5,7 @@ import { MemoryStore } from "../adapters/memory/store.ts";
 import { PostgresStore } from "../adapters/postgres/store.ts";
 import { LocalDiskStorage } from "../adapters/storage/local-disk.ts";
 import { S3Storage } from "../adapters/storage/s3.ts";
-import { FakeAiPipeline } from "../adapters/ai/fake-pipeline.ts";
+import { createAiFromEnv } from "../adapters/ai/index.ts";
 import { defaultDeps, pagination, type Deps } from "../usecases/deps.ts";
 import * as deviceUseCases from "../usecases/devices.ts";
 import * as recordingUseCases from "../usecases/recordings.ts";
@@ -101,7 +101,7 @@ export function createApp(options: AppOptions = {}): http.Server {
     defaultDeps({
       store: createStoreFromEnv(),
       storage: createStorageFromEnv(storageDir),
-      ai: new FakeAiPipeline(),
+      ai: createAiFromEnv(),
       identity: createIdentityVerifierFromEnv() ?? undefined,
     });
   const version = options.version ?? CONTRACT_VERSION;

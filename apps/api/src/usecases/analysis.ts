@@ -174,7 +174,7 @@ async function runClaimedJob(deps: Deps, job: AnalysisJob): Promise<void> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await retryOrFail(deps, job, analyzing, message);
+    await retryOrFail(deps, job, analyzing, message, err);
   }
 }
 
@@ -183,10 +183,12 @@ async function retryOrFail(
   job: AnalysisJob,
   recording: Recording,
   message: string,
+  error?: unknown,
 ): Promise<void> {
   const now = deps.clock.now();
+  const retryable = (error as { retryable?: boolean } | undefined)?.retryable ?? true;
 
-  if (job.attempt < job.maxAttempts) {
+  if (retryable !== false && job.attempt < job.maxAttempts) {
     const backoff = Math.min(
       deps.analysis.retryMaxMs,
       deps.analysis.retryBaseMs * 2 ** Math.max(0, job.attempt - 1),

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createApp } from "../apps/api/src/http/server.ts";
 import { MemoryStore } from "../apps/api/src/adapters/memory/store.ts";
 import { FakeAiPipeline } from "../apps/api/src/adapters/ai/fake-pipeline.ts";
+import { AiProviderError } from "../apps/api/src/adapters/ai/http-pipeline.ts";
 import { uuidv7 } from "../apps/api/src/domain/ids.ts";
 import type { Recording } from "../apps/api/src/domain/types.ts";
 import type { AiPipeline, ObjectStorage } from "../apps/api/src/ports/store.ts";
@@ -225,6 +226,28 @@ test("재시도 한도를 넘기면 작업과 녹음이 실패로 종료된다",
 
   const result = await store.findRecording(recording.id);
   assert.equal(result?.status, "analysis_failed");
+});
+
+test("재시도 불가 오류는 첫 시도에 실패로 종료된다", async () => {
+  const fatal: AiPipeline = {
+    async analyze() {
+      throw new AiProviderError("AI_PROVIDER_ERROR", "잘못된 요청", 400, false);
+    },
+    embedQuery: async () => [],
+  };
+  const { deps, userId, recording, store } = await setup({
+    ai: fatal,
+    analysis: { maxAttempts: 3 },
+  });
+
+  const { job } = await enqueueAnalysis(deps, userId, recording.id);
+  await runNextAnalysisJob(deps);
+
+  const failed = await getAnalysisJob(deps, userId, job.id);
+  assert.equal(failed.status, "failed");
+  assert.equal(failed.attempt, 1, "재시도하지 않는다");
+  assert.match(failed.lastError ?? "", /잘못된 요청/);
+  assert.equal((await store.findRecording(recording.id))?.status, "analysis_failed");
 });
 
 test("분석 타임아웃은 실패로 기록된다", async () => {
