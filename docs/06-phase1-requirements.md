@@ -1,7 +1,7 @@
 # Phase 1 요구사항 (웨어러블 대화 기억)
 
 - 기준 문서: `MEMORIAL_PROJECT_SPEC.md` v1.0 (2026-11-13 확정)
-- 설계: `docs/10-domain-model.md` (승인 대기)
+- 설계: `docs/10-domain-model.md` v1.1 (확정)
 - 상태 코드: `01-requirements.md` §1 과 동일
 
 ## 1. 기능 요구사항

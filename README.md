@@ -18,7 +18,7 @@
 | Fake Hardware / Fake Mobile | 완료 |
 | 통합·계약 테스트 | 완료 — 17 tests |
 | PostgreSQL 마이그레이션 작성 | 완료 |
-| PostgreSQL 실행 검증·어댑터 | **ENV-PENDING** (DB 환경 없음) |
+| PostgreSQL 실행 검증·어댑터 | **ENV-PENDING** — 검증 절차는 `docs/08-work-order.md` W-05~W-08 |
 | 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
 
 ## 빠른 시작
@@ -94,7 +94,9 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 
 ## 다음 단계
 
-1. PostgreSQL 어댑터 + 마이그레이션 실행 검증 (`make db-up && make db-migrate && npm run test:db`)
-2. 웹 대시보드 (타임라인·인물·검색)
-3. 실제 AI provider 어댑터
-4. 실물 웨어러블 + iOS BLE 연동 (`HW-PENDING`)
+작업 순서와 완료 조건은 [`docs/08-work-order.md`](docs/08-work-order.md) 를 따른다.
+
+1. PostgreSQL 검증·어댑터 (W-05~W-09) — `make db-up && npm run db:migrate`
+2. 웹 대시보드 (W-16·W-17)
+3. 실제 AI provider 어댑터 + 비동기 분석 (W-15·W-18)
+4. 실물 웨어러블 + iOS BLE 연동 (W-20~W-24, `HW-PENDING`)

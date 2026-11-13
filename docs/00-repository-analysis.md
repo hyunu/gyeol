@@ -4,6 +4,10 @@
 - 대상 경로: `/Users/hyunu/project/gyeol`
 - 분석 방법: 파일 시스템 조회, `git` 상태/원격 조회, 홈 디렉터리 및 iCloud Drive 문서 검색
 
+> 이 문서는 **2026-11-13 시점의 스냅샷**이다. 이후 변동은 각 설계 문서와
+> `docs/08-work-order.md` 가 기준이며, 본문의 GAP/부재 서술은 당시 상태를 뜻한다.
+> GAP-001 은 같은 날 `MEMORIAL_PROJECT_SPEC.md` v1.0 확정으로 해소됐다.
+
 ## 1. 요약
 
 | 항목 | 결과 |

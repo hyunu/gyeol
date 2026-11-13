@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node apps/api/server.mjs",
     "test": "node --test tools/test/*.test.mjs tests/*.test.ts tests/unit/*.test.ts",
-    "test:db": "GYEOL_STORE=postgres node --test tests/db/*.test.ts",
+    "test:db": "node scripts/test-db.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "validate": "node tools/validate-contracts.mjs",
     "contract-test": "node tools/contract-test.mjs",

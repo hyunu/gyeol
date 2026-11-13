@@ -1,10 +1,10 @@
 # 요구사항 정의서 (Requirements Baseline)
 
-- 작성일: 2026-11-13
-- 최상위 기준 문서: `MEMORIAL_PROJECT_SPEC.md` — **미확보 (GAP-001)**
-- 본 문서의 지위: 사용자 지시문에서 직접 도출한 **요구사항 기준선(baseline)**.
-  기준 문서 확보 시 본 문서를 갱신하고 추적표를 재작성한다.
-- 관련 문서: `docs/00-repository-analysis.md`
+- 작성일: 2026-11-13 / 갱신: 2026-11-14
+- 최상위 기준 문서: `MEMORIAL_PROJECT_SPEC.md` — **v1.0 확정 (2026-11-13)**
+- 본 문서의 지위: 기준 문서와 사용자 지시문에서 도출한 **요구사항 기준선(baseline)**.
+  요구사항 변경 시 본 문서와 추적표를 함께 갱신한다.
+- 관련 문서: `docs/00-repository-analysis.md`, `docs/08-work-order.md`
 
 ## 1. 상태 코드 정의
 
@@ -45,7 +45,7 @@
 
 | ID | 요구사항 | 검증 방법 | 상태 |
 | --- | --- | --- | --- |
-| R-009 | 분석 후 멈추지 않고, 하드웨어 의존성이 없는 **공통 스키마·데이터 모델·API 계약·개발 환경**부터 실제 구현에 착수한다. | 코드/스키마/계약 테스트 통과 | `WIP` — 계약 3종·OpenAPI·검증기·워킹 스켈레톤 API 완료, 도메인 모델은 스펙 대기 |
+| R-009 | 분석 후 멈추지 않고, 하드웨어 의존성이 없는 **공통 스키마·데이터 모델·API 계약·개발 환경**부터 실제 구현에 착수한다. | 코드/스키마/계약 테스트 통과 | `DONE` — 계약 10종·OpenAPI 12 오퍼레이션·도메인 코어·API·Fake 하드웨어, 17 tests |
 | R-010 | 각 작업을 테스트하고 문서화한다. | 테스트 실행 로그 + 해당 문서 갱신 | `DONE` (Phase 0 기준) |
 | R-011 | 실물 하드웨어 검증이 필요한 항목은 완료로 표시하지 않고 별도 관리한다. | `HW-PENDING` 등록부 및 릴리스 체크리스트 | `DONE` (규칙 수립) |
 | R-012 | 기존 코드를 임의로 삭제하거나 전체 구조를 무리하게 교체하지 않고 자산을 최대한 활용한다. | 변경 전후 비교, 삭제 시 사유 기록 | `N/A` (활용 가능 자산 0건) |
@@ -62,13 +62,13 @@
 | R-006 | 폴더 구조 문서 | `docs/03-folder-structure.md` | `DONE(잠정)` |
 | R-007 | 미확정/위험 등록부 | `docs/01-requirements.md` §4 | `DONE` |
 | R-008 | 단계별 개발 계획 | `docs/04-development-plan.md` | `DONE(잠정)` |
-| R-009 | 공통 스키마/API 계약/개발 환경 | `contracts/`, `apps/api/`, `tools/`, `Makefile`, `.github/workflows/ci.yml` | `WIP` |
-| R-009b | 도메인 데이터 모델 | (미착수 — 스펙 필요) | `BLOCKED` |
+| R-009 | 공통 스키마/API 계약/개발 환경 | `contracts/`, `apps/api/`, `tools/`, `Makefile`, `.github/workflows/ci.yml` | `DONE` |
+| R-009b | 도메인 데이터 모델 | `docs/10-domain-model.md` v1.1, `contracts/schemas/domain/` | `DONE` |
 | R-010 | 테스트 및 문서 | `tools/test/contracts.test.mjs`, 각 문서 | `DONE` (Phase 0) |
 | R-011 | HW 검증 대기 등록부 | `docs/01-requirements.md` §5 | `DONE` |
 | R-012 | 자산 보존 규칙 | 본 문서 §2.3, `docs/adr/0001-contract-first.md` | `N/A` |
 | R-013 | 요구사항 문서 | `docs/01-requirements.md` | `DONE` |
-| R-014 | 분석 + 단계 계획 | `docs/00-repository-analysis.md`, `docs/04-development-plan.md` | `WIP` (Phase 0 완료) |
+| R-014 | 분석 + 단계 계획 | `docs/00-repository-analysis.md`, `docs/04-development-plan.md`, `docs/08-work-order.md` | `WIP` (Phase 5 완료, Phase 6~7 대기) |
 
 ## 4. 미확정 사항 및 기술적 위험
 

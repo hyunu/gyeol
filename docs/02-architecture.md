@@ -1,11 +1,11 @@
-# 시스템 아키텍처 (초안 v0.1)
+# 시스템 아키텍처 (v0.2)
 
-- 상태: **잠정(provisional)** — `MEMORIAL_PROJECT_SPEC.md` 미확보 (GAP-001)
-- 작성일: 2026-11-13
-- 관련: `00-repository-analysis.md`, `01-requirements.md`, `contracts/`
+- 상태: **확정** — `MEMORIAL_PROJECT_SPEC.md` v1.0 (2026-11-13)
+- 작성일: 2026-11-13 / 갱신: 2026-11-14
+- 관련: `00-repository-analysis.md`, `01-requirements.md`, `contracts/`, `10-domain-model.md`
 
-> 이 문서는 **기술 중립적 경계**만 확정한다. 언어/프레임워크/DB 선택은 OPEN-002 확정 후
-> `adr/` 에 기록하고 본 문서에 반영한다. 확정된 사실과 잠정 가정을 구분해 표기한다.
+> 계층 경계와 의존 방향은 확정이다. 구현 진행에 따라 §3 의 "현재 상태" 를 실제 코드와
+> 맞춘다. 미확정 사항은 `docs/10-domain-model.md` §10 의 TBD 목록을 따른다.
 
 ## 1. 아키텍처 원칙
 
@@ -26,37 +26,39 @@ flowchart LR
   admin[운영자] -->|HTTPS| api
   api --> db[(영속 저장소)]
   api --> obj[(미디어 저장소)]
-  api <-->|포트/어댑터| hw[[하드웨어<br/>종류 미확정 OPEN-003]]
-  api --> ext[외부 서비스<br/>미확정]
+  api <-->|포트/어댑터| hw[[XIAO nRF52840 Sense<br/>BLE · microSD]]
+  api --> ext[외부 서비스<br/>AI provider 미확정]
 ```
 
 - 확정: API 단일 진입점, 영속 저장소 분리, 미디어 분리, 하드웨어는 교체 가능한 경계 뒤.
-- 미확정: 하드웨어 종류·프로토콜, 외부 연동 필요 여부, 인증 방식(OPEN-004).
+- 미확정: AI provider 선택(ENV-05), 인증 방식(D-01).
 
 ## 3. 계층 구조
 
 | 계층 | 책임 | 의존 가능 대상 | 현재 상태 |
 | --- | --- | --- | --- |
 | L0 계약 | JSON Schema, OpenAPI, 오류 코드 | 없음 | **구현됨** (`contracts/`) |
-| L1 도메인 코어 | 엔티티, 값 객체, 불변식, 도메인 서비스 | L0 | 미착수 (스펙 필요) |
-| L2 응용 | 유스케이스 오케스트레이션, 트랜잭션 경계 | L1, 포트 인터페이스 | 미착수 |
-| L3 어댑터 | 저장소, 미디어, 하드웨어, 외부 연동 구현 | L1·L2 포트 | 미착수 |
-| L4 엣지 | HTTP 라우팅, 인증, 요청/응답 매핑, CLI | L2 | **워킹 스켈레톤 구현됨** (`apps/api/`) |
-| L5 클라이언트 | 웹/앱/장치 UI | L0(계약) | 미착수 |
+| L1 도메인 코어 | 엔티티, 값 객체, 불변식, 도메인 서비스 | L0 | **구현됨** (`apps/api/src/domain/`) |
+| L2 응용 | 유스케이스 오케스트레이션, 트랜잭션 경계 | L1, 포트 인터페이스 | **구현됨** (`apps/api/src/usecases/`) |
+| L3 어댑터 | 저장소, 미디어, 하드웨어, 외부 연동 구현 | L1·L2 포트 | **부분 구현** — 메모리 저장소·로컬 디스크·Fake AI. PostgreSQL 어댑터는 W-07 |
+| L4 엣지 | HTTP 라우팅, 인증, 요청/응답 매핑, CLI | L2 | **구현됨** (`apps/api/src/http/`) |
+| L5 클라이언트 | 웹/앱/장치 UI | L0(계약) | **미착수** — Fake Device/Mobile 은 테스트 하네스(`packages/`) |
 
 **금지 규칙**: L1 은 L2~L5 를 import 하지 않는다. L1·L2 는 하드웨어 SDK/드라이버를
 import 하지 않는다. 위반은 CI 린트로 차단한다(스택 확정 후 규칙 구현).
 
 ## 4. 하드웨어 경계 설계
 
-하드웨어 종류가 미확정이므로, **최소 공통 능력**만 포트로 정의하고 나머지는 확장한다.
+하드웨어 경계는 확정됐다(OPEN-003). 포트 정의는 `packages/hardware-adapter/port.ts` 이며,
+최소 공통 능력만 노출하고 프로토콜/드라이버 세부는 어댑터 내부에 격리한다.
 
 ```text
-DevicePort
-├─ describe(): DeviceDescriptor        // 식별/펌웨어/능력
-├─ health(): DeviceHealth              // 연결 상태, 지연
-├─ read(command): DeviceReading        // 센서/입력 읽기
-└─ write(command, payload): Ack        // 표시/구동 (지원 시)
+HardwareAdapter
+├─ capture(options): CapturedRecording   // VAD 구간(+전후 버퍼) 녹음
+├─ list(): CapturedRecording[]            // ACK 되지 않은 로컬 파일
+├─ readFile(clientRecordingId): Buffer
+├─ acknowledgeTransfer(clientRecordingId) // 폰 수신 확인 후 기기에서 삭제
+└─ status(): WearableStatus               // 배터리·저장공간·대기 파일 수
 ```
 
 | 규칙 | 내용 |
@@ -65,8 +67,6 @@ DevicePort
 | P2 | 포트 구현은 `fake`(테스트), `simulated`(개발), `real`(실물) 3종을 둔다. |
 | P3 | `real` 어댑터의 동작은 단위 테스트로 "검증 완료"를 주장하지 않는다 → `HW-PENDING`. |
 | P4 | 타임아웃·재시도·서킷브레이커 정책은 어댑터가 아니라 응용 계층에서 결정한다. |
-
-> OPEN-003 확정 시 `DevicePort` 를 capability 단위로 분리한다(예: 표시, 입력, 근접 감지).
 
 ## 5. 데이터 흐름 (쓰기 요청 예)
 
@@ -109,10 +109,10 @@ sequenceDiagram
 | 계약 우선 워크플로 | 확정 | CI 구현됨 |
 | 오류/problem+json 규약 | 확정 | `contracts/schemas/common/problem.json` |
 | 페이지 봉투 | 확정 | `page.json` |
-| 하드웨어 포트 존재 | 확정 | 상세 capability 는 미확정 |
+| 하드웨어 포트 존재 | 확정 | `packages/hardware-adapter/port.ts` |
 | 언어/런타임/DB/배포 | **확정** (Node/TS, PostgreSQL+pgvector, Object Storage) | 스펙 v1.0 §3 |
-| 인증/권한 모델 | **미확정** | D-01 / OPEN-004 |
-| 도메인 엔티티 | **설계 완료, 승인 대기** | `docs/10-domain-model.md` |
+| 인증/권한 모델 | **미확정** | D-01 / OPEN-005 |
+| 도메인 엔티티 | **확정** | `docs/10-domain-model.md` v1.1 |
 
 ## 8. 원본·파생 계층 분리 (Phase 1 확정)
 

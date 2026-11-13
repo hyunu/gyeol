@@ -1,4 +1,4 @@
-.PHONY: help install check validate typecheck test contract-test db-up db-down db-migrate clean
+.PHONY: help install check validate typecheck test test-db contract-test db-up db-down db-migrate clean
 
 help: ## 사용 가능한 명령
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "};{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -16,6 +16,9 @@ typecheck: ## TypeScript 타입 검사
 
 test: ## 단위 + 통합 테스트
 	npm run --silent test
+
+test-db: ## PostgreSQL 통합 테스트 (DATABASE_URL 필요)
+	npm run --silent test:db
 
 contract-test: ## 실행 중인 서버를 OpenAPI 와 대조 (BASE_URL)
 	npm run --silent contract-test
