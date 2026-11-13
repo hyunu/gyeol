@@ -152,6 +152,8 @@ export interface AiPipeline {
 
 /** 오브젝트 스토리지 포트. */
 export interface ObjectStorage {
+  /** health·로그에 쓰는 구현 식별자. 구현이 없으면 unknown 으로 보고한다. */
+  readonly kind?: "local" | "s3";
   /** 세션 임시 객체를 만든다(0바이트). */
   startSession(sessionId: string, expectedBytes: number): Promise<void>;
   appendChunk(sessionId: string, offset: number, chunk: Buffer): Promise<number>;

@@ -18,17 +18,18 @@
 | 비동기 분석 작업 큐 | 완료 (ADR-0007, 재시도·타임아웃·임차 회수) |
 | 웹 대시보드 (React) | 완료 — 타임라인·상세·인물 필터·키워드 검색 (`apps/web`) |
 | Fake Hardware / Fake Mobile | 완료 |
-| 통합·계약 테스트 | 완료 — 27 tests |
+| 통합·계약 테스트 | 완료 — 28 tests |
 | PostgreSQL 마이그레이션·제약 검증 | 완료 (15 테이블, `npm run db:checks`) |
 | PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
 | 오브젝트 스토리지 | 완료 — 로컬 디스크 + S3/MinIO (`GYEOL_STORAGE`), `test:s3` 7 tests |
+| 관측성 | 완료 — 요청 JSON 로그, `X-Trace-Id`, `GET /metrics` (`docs/09-observability.md`) |
 | 실물 웨어러블 / iOS 앱 / 실제 AI | **HW-PENDING** |
 
 ## 빠른 시작
 
 ```bash
 npm install
-npm run check      # 계약 + 타입 + 테스트 (27 tests)
+npm run check      # 계약 + 타입 + 테스트 (28 tests)
 npm start          # http://127.0.0.1:8080 (메모리 저장소)
 ```
 

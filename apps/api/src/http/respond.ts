@@ -24,6 +24,23 @@ export function sendEmpty(res: ServerResponse, status: number, traceId: string):
   res.end();
 }
 
+export function sendText(
+  res: ServerResponse,
+  status: number,
+  body: string,
+  contentType: string,
+  traceId: string,
+): void {
+  const payload = Buffer.from(body);
+  res.writeHead(status, {
+    "Content-Type": contentType,
+    "Content-Length": payload.length,
+    "Cache-Control": "no-store",
+    "X-Trace-Id": traceId,
+  });
+  res.end(payload);
+}
+
 export function sendProblem(res: ServerResponse, err: unknown, traceId: string, instance: string): void {
   const appError =
     err instanceof AppError

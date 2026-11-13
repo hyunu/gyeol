@@ -27,6 +27,7 @@ import type { ObjectStorage } from "../../ports/store.ts";
  *   <destinationKey>                        ← 최종 객체
  */
 export class S3Storage implements ObjectStorage {
+  readonly kind = "s3" as const;
   private readonly client: S3Client;
   private readonly bucket: string;
   private ready: Promise<void> | null = null;

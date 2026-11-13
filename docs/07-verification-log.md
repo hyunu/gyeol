@@ -2,7 +2,7 @@
 
 - 최종 실행: 2026-11-14
 - 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db` · `test:s3` · `web:build`
-- 결과: **27 tests / pass 27 / fail 0**, DB **14 tests / pass 14 / fail 0**, S3 **7 tests / pass 7 / fail 0**,
+- 결과: **28 tests / pass 28 / fail 0**, DB **14 tests / pass 14 / fail 0**, S3 **7 tests / pass 7 / fail 0**,
   계약 스키마 11 · 예제 17 · OpenAPI 유효, DB 마이그레이션(2건)·제약 검사 통과
 
 ## 1. 자동 검증 항목
@@ -114,6 +114,19 @@ npm run test:s3
 - 커밋이 임시 객체를 읽어 다시 쓰므로 전송량이 2배다. 운영 규모의 대안은
   `docs/adr/0008-object-storage-s3.md` 에 기록했다.
 - 서버는 `GYEOL_STORAGE=local|s3` 로 선택하며, 잘못된 값은 fail-closed 다.
+
+## 2.4 관측성 (W-27, 2026-11-14)
+
+| 검증 | 근거 | 결과 |
+| --- | --- | --- |
+| 요청마다 JSON 로그(traceId·method·path·status·durationMs·userId) | `tests/observability.test.ts` | 통과 |
+| `X-Request-Id` 가 `X-Trace-Id` 로 왕복 | 동일 | 통과 |
+| 검색어(쿼리 문자열)를 로그에 남기지 않음 | 동일 | 통과 |
+| `/metrics` Prometheus 텍스트·요청/지연/프로세스 메트릭 | 동일 | 통과 |
+| `/healthz` 에 `storage` 실제 연결 검사 추가 | 동일 | 통과 |
+| 테스트 실행 중 로그 소음 제거(`NODE_TEST_CONTEXT`) | 동일 | 확인 |
+
+문서: `docs/09-observability.md` (로그 스키마·메트릭·알림 최소 세트·조회 SQL).
 
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 

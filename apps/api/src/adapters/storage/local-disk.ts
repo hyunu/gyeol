@@ -13,6 +13,7 @@ import type { ObjectStorage } from "../../ports/store.ts";
  * 실제 서비스에서는 S3 등으로 교체한다(같은 ObjectStorage 포트).
  */
 export class LocalDiskStorage implements ObjectStorage {
+  readonly kind = "local" as const;
   private readonly root: string;
 
   constructor(root: string) {

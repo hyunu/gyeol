@@ -13,6 +13,7 @@ gyeol/
 │   └── src/
 │       ├── domain/                 # L1: 순수 규칙 (상태전이·삭제조건·화자판정)
 │       ├── ports/                  # Store / AiPipeline / ObjectStorage 계약
+│       ├── observability.ts        # 요청 로그·Prometheus 메트릭
 │       ├── usecases/               # L2: 디바이스·녹음·대화·비동기 분석 유스케이스
 │       ├── adapters/
 │       │   ├── memory/store.ts     # 기준 구현 (테스트·개발)
@@ -53,7 +54,7 @@ gyeol/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~08, 10, adr/0001~0007)
+├── docs/ (00~10, adr/0001~0008)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```
 

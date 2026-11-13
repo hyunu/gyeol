@@ -15,7 +15,8 @@ import { methodNotAllowed, notFound, validationFailed } from "../domain/errors.t
 import type { ActionItemStatus } from "../domain/types.ts";
 import type { ObjectStorage, Store } from "../ports/store.ts";
 import { DEMO_USER_ID, resolveUserId } from "./auth.ts";
-import { sendEmpty, sendJson, sendProblem, readBinaryBody, readJsonBody } from "./respond.ts";
+import { sendEmpty, sendJson, sendProblem, sendText, readBinaryBody, readJsonBody } from "./respond.ts";
+import { consoleLogger, Metrics, type Logger, type LogEntry } from "../observability.ts";
 import * as dto from "./dto.ts";
 import {
   assertNoUnknownKeys,
@@ -60,6 +61,8 @@ export interface AppOptions {
    * 테스트는 `{ enabled: false }` 로 끄고 `runNextAnalysisJob` 을 직접 호출한다.
    */
   worker?: { enabled?: boolean; intervalMs?: number };
+  /** 테스트에서 로그를 수집할 때 주입한다. 기본은 JSON 한 줄 출력. */
+  logger?: Logger;
 }
 
 /**
@@ -98,6 +101,10 @@ export function createApp(options: AppOptions = {}): http.Server {
       ai: new FakeAiPipeline(),
     });
   const version = options.version ?? CONTRACT_VERSION;
+  const metrics = new Metrics();
+  const logger: Logger =
+    options.logger ??
+    (process.env.NODE_TEST_CONTEXT ? { info: () => undefined, error: () => undefined } : consoleLogger);
 
   const routes: Route[] = [];
   const route = (method: string, template: string, auth: boolean, handle: Route["handle"]) => {
@@ -138,6 +145,24 @@ export function createApp(options: AppOptions = {}): http.Server {
       });
     }
 
+    const storageStartedAt = Date.now();
+    try {
+      await deps.storage.exists("__healthz__");
+      checks.push({
+        name: "storage",
+        status: "ok",
+        detail: deps.storage.kind ?? "unknown",
+        latencyMs: Date.now() - storageStartedAt,
+      });
+    } catch (err) {
+      checks.push({
+        name: "storage",
+        status: "down",
+        detail: err instanceof Error ? err.message : String(err),
+        latencyMs: Date.now() - storageStartedAt,
+      });
+    }
+
     checks.push({
       name: "device-link",
       status: "skipped",
@@ -155,6 +180,11 @@ export function createApp(options: AppOptions = {}): http.Server {
       body: { status, version, time: deps.clock.now().toISOString(), checks },
     };
   });
+
+  route("GET", "/metrics", false, async () => ({
+    status: 200,
+    body: metrics.render(),
+  }));
 
   route("GET", "/api/v1/info", false, async () => ({
     status: 200,
@@ -383,10 +413,39 @@ export function createApp(options: AppOptions = {}): http.Server {
     return { status: 200, body: dto.actionItemDto(item) };
   });
 
+  const requestErrors = new WeakMap<http.ServerResponse, unknown>();
+  const requestUserIds = new WeakMap<http.ServerResponse, string>();
+
   const server = http.createServer(async (req, res) => {
+    const startedAt = performance.now();
+    const method = req.method ?? "UNKNOWN";
     const traceId = (req.headers["x-request-id"] as string) ?? randomUUID();
     const url = new URL(req.url ?? "/", "http://localhost");
     const pathSegments = split(url.pathname);
+
+    res.on("finish", () => {
+      const durationMs = performance.now() - startedAt;
+      metrics.observeRequest(method, res.statusCode, durationMs);
+
+      const entry: LogEntry = {
+        time: new Date().toISOString(),
+        level: res.statusCode >= 500 ? "error" : "info",
+        msg: "http_request",
+        traceId,
+        method,
+        path: url.pathname,
+        status: res.statusCode,
+        durationMs: Math.round(durationMs * 100) / 100,
+      };
+      const userId = requestUserIds.get(res);
+      if (userId) entry.userId = userId;
+
+      const error = requestErrors.get(res);
+      if (error) entry.error = error instanceof Error ? error.message : String(error);
+
+      if (res.statusCode >= 500) logger.error(entry);
+      else logger.info(entry);
+    });
     let matched: Route | undefined;
     let params: Record<string, string> = {};
     for (const candidate of routes) {
@@ -431,12 +490,16 @@ export function createApp(options: AppOptions = {}): http.Server {
       let userId = "";
       if (matched.auth) {
         userId = resolveUserId(req, env);
+        requestUserIds.set(res, userId);
         await deps.store.ensureUser(userId);
       }
       const result = await matched.handle({ req, res, url, params, traceId, userId, deps });
       if (result.status === 204) sendEmpty(res, 204, traceId);
-      else sendJson(res, result.status, result.body ?? {}, traceId);
+      else if (typeof result.body === "string") {
+        sendText(res, result.status, result.body, "text/plain; version=0.0.4; charset=utf-8", traceId);
+      } else sendJson(res, result.status, result.body ?? {}, traceId);
     } catch (err) {
+      requestErrors.set(res, err);
       sendProblem(res, err, traceId, url.pathname);
     }
   });
