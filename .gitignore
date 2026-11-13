@@ -4,6 +4,10 @@ node_modules/
 # 빌드/산출물
 dist/
 build/
+.pio/
+.build/
+DerivedData/
+xcuserdata/
 out/
 coverage/
 *.tsbuildinfo
