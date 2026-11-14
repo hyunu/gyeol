@@ -44,6 +44,7 @@ bool helloPending = false;
 uint32_t txSeq = 0;
 
 fs::FS *storage = nullptr;
+size_t storageFreeBytes();
 
 struct CurrentFile {
   bool valid = false;
@@ -166,13 +167,32 @@ bool initPdm() {
 
 void stopPdm() { i2s_driver_uninstall(I2S_NUM_0); }
 
-double frameEnergy(const uint8_t *bytes, size_t length) {
+struct FrameStats {
+  double mean = 0;
+  double rms = 0;
+  double peak = 0;
+};
+
+// DC 오프셋을 제거한 RMS/피크. PDM 마이크는 DC 성분이 커서 평균 절댓값만으로는
+// 음성/톤을 구분하기 어렵다. VAD 는 peak 를 주 신호로 쓴다.
+FrameStats frameStats(const uint8_t *bytes, size_t length) {
   const int16_t *samples = reinterpret_cast<const int16_t *>(bytes);
   const size_t count = length / 2;
-  if (count == 0) return 0;
+  FrameStats stats;
+  if (count == 0) return stats;
+
   double sum = 0;
-  for (size_t i = 0; i < count; ++i) sum += fabs(static_cast<double>(samples[i]));
-  return sum / count;
+  for (size_t i = 0; i < count; ++i) sum += samples[i];
+  stats.mean = sum / count;
+
+  double sumSq = 0;
+  for (size_t i = 0; i < count; ++i) {
+    const double value = samples[i] - stats.mean;
+    sumSq += value * value;
+    if (fabs(value) > stats.peak) stats.peak = fabs(value);
+  }
+  stats.rms = sqrt(sumSq / count);
+  return stats;
 }
 
 // 에너지 기반 VAD: 0.5초 프리롤, 3프레임 연속 임계 초과 시 시작, 2초 무음 시 종료.
@@ -185,6 +205,11 @@ bool recordVadClip(const String &path, int maxSeconds) {
   constexpr size_t MAX_BYTES = 600000;  // LittleFS 보호
 
   if (!initPdm()) return false;
+  if (storageFreeBytes() < 700000) {
+    Serial.println("[vad] 저장 공간 부족");
+    stopPdm();
+    return false;
+  }
   File file = storage->open(path, FILE_WRITE);
   if (!file) {
     stopPdm();
@@ -196,20 +221,21 @@ bool recordVadClip(const String &path, int maxSeconds) {
   size_t got = 0;
 
   // 0.5초 캘리브레이션. 시작 과도음을 피하려고 뒤쪽 10프레임만 사용한다.
-  double energies[PREROLL_FRAMES];
+  double peaks[PREROLL_FRAMES];
   int calibrated = 0;
   for (int i = 0; i < PREROLL_FRAMES; ++i) {
     if (i2s_read(I2S_NUM_0, buffer, FRAME_BYTES, &got, pdMS_TO_TICKS(500)) != ESP_OK) break;
     if (got == 0) continue;
-    energies[calibrated % PREROLL_FRAMES] = frameEnergy(buffer, got);
+    peaks[calibrated % PREROLL_FRAMES] = frameStats(buffer, got).peak;
     calibrated += 1;
   }
-  double noiseFloor = 0;
+  // 시작 과도음/톤이 캘리브레이션에 섞여도 임계값이 과대해지지 않도록 최솟값을 쓴다.
+  double noisePeak = 1e9;
   const int noiseSamples = min(calibrated, 10);
-  for (int i = 0; i < noiseSamples; ++i) noiseFloor += energies[(calibrated - 1 - i) % PREROLL_FRAMES];
-  noiseFloor = noiseSamples > 0 ? noiseFloor / noiseSamples : 0;
-  const double threshold = max(400.0, noiseFloor * 1.6);
-  Serial.printf("[vad] noise=%.0f threshold=%.0f\n", noiseFloor, threshold);
+  for (int i = 0; i < noiseSamples; ++i) noisePeak = min(noisePeak, peaks[(calibrated - 1 - i) % PREROLL_FRAMES]);
+  if (noiseSamples == 0) noisePeak = 0;
+  const double threshold = max(80.0, noisePeak * 3.0);
+  Serial.printf("[vad] noisePeak=%.0f threshold=%.0f\n", noisePeak, threshold);
 
   std::vector<std::vector<int16_t>> preroll;
   bool recording = false;
@@ -223,10 +249,11 @@ bool recordVadClip(const String &path, int maxSeconds) {
   while (static_cast<int>(millis() - startedAt) < maxSeconds * 1000) {
     if (i2s_read(I2S_NUM_0, buffer, FRAME_BYTES, &got, pdMS_TO_TICKS(500)) != ESP_OK) break;
     if (got == 0) continue;
-    const double energy = frameEnergy(buffer, got);
-    if (energy > maxEnergy) maxEnergy = energy;
+    const FrameStats stats = frameStats(buffer, got);
+    if (stats.peak > maxEnergy) maxEnergy = stats.peak;
     if (millis() - lastVadLog > 1000) {
-      Serial.printf("[vad] energy=%.0f max=%.0f recording=%d\n", energy, maxEnergy, recording ? 1 : 0);
+      Serial.printf("[vad] peak=%.0f maxPeak=%.0f rms=%.0f recording=%d\n", stats.peak, maxEnergy,
+                    stats.rms, recording ? 1 : 0);
       lastVadLog = millis();
     }
 
@@ -235,7 +262,7 @@ bool recordVadClip(const String &path, int maxSeconds) {
                                  reinterpret_cast<int16_t *>(buffer) + got / 2);
       preroll.push_back(frame);
       if (preroll.size() > PREROLL_FRAMES) preroll.erase(preroll.begin());
-      if (energy > threshold) speechRun += 1;
+      if (stats.peak > threshold) speechRun += 1;
       else speechRun = 0;
       if (speechRun >= 3) {
         recording = true;
@@ -250,7 +277,7 @@ bool recordVadClip(const String &path, int maxSeconds) {
     } else {
       file.write(buffer, got);
       written += got;
-      if (energy < threshold) silenceMs += 20;
+      if (stats.peak < threshold) silenceMs += 20;
       else silenceMs = 0;
       if (silenceMs >= SILENCE_MS) {
         Serial.println("[vad] silence stop");
@@ -572,9 +599,51 @@ void startBle() {
 
 
 
+
+size_t storageFreeBytes() {
+  if (storage == nullptr) return 0;
+  if (storage == &LittleFS) {
+    const size_t total = LittleFS.totalBytes();
+    const size_t used = LittleFS.usedBytes();
+    return total > used ? total - used : 0;
+  }
+  if (storage == &SD) return SD.cardSize();
+  return 0;
+}
+
+void clearRecordings() {
+  if (storage == nullptr) return;
+  if (storage == &LittleFS) {
+    Serial.println("[storage] LittleFS format");
+    LittleFS.end();
+    LittleFS.format();
+    LittleFS.begin(true);
+    storage = &LittleFS;
+  } else {
+    File dir = storage->open("/recordings");
+    if (dir) {
+      File entry = dir.openNextFile();
+      while (entry) {
+        String path = entry.name();
+        if (!entry.isDirectory()) {
+          entry.close();
+          storage->remove(path.startsWith("/") ? path : String("/recordings/") + path);
+        } else {
+          entry.close();
+        }
+        entry = dir.openNextFile();
+      }
+      dir.close();
+    }
+  }
+  storage->mkdir("/recordings");
+  currentFile.valid = false;
+  Serial.printf("[storage] cleared, free=%u bytes\n", static_cast<unsigned>(storageFreeBytes()));
+}
+
 void hardwareCheck() {
   const char *kind = storage == &SD ? "SD" : storage == &LittleFS ? "LittleFS" : "none";
-  Serial.printf("[hw] storage=%s\n", kind);
+  Serial.printf("[hw] storage=%s free=%u bytes\n", kind, static_cast<unsigned>(storageFreeBytes()));
   if (storage == &SD) {
     Serial.printf("[hw] card=%llu MB\n", SD.cardSize() / (1024ULL * 1024ULL));
   }
@@ -591,14 +660,50 @@ void hardwareCheck() {
   while (millis() - started < 2000) {
     if (i2s_read(I2S_NUM_0, buffer, sizeof(buffer), &got, pdMS_TO_TICKS(200)) != ESP_OK) break;
     if (got == 0) continue;
-    const double energy = frameEnergy(buffer, got);
-    sum += energy;
-    if (energy > peak) peak = energy;
+    const FrameStats stats = frameStats(buffer, got);
+    sum += stats.rms;
+    if (stats.peak > peak) peak = stats.peak;
     frames += 1;
   }
   stopPdm();
-  Serial.printf("[hw] PDM frames=%d mean=%.0f peak=%.0f\n", frames,
+  Serial.printf("[hw] PDM frames=%d meanRms=%.0f peak=%.0f\n", frames,
                 frames > 0 ? sum / frames : 0, peak);
+}
+
+
+bool recordFixed(const String &path, int seconds) {
+  if (!initPdm()) return false;
+  if (storageFreeBytes() < 700000) {
+    Serial.println("[fixed] 저장 공간 부족");
+    stopPdm();
+    return false;
+  }
+  File file = storage->open(path, FILE_WRITE);
+  if (!file) {
+    stopPdm();
+    return false;
+  }
+  writeWavHeader(file, 0);
+  uint8_t buffer[512];
+  size_t got = 0;
+  size_t written = 0;
+  const uint32_t started = millis();
+  while (millis() - started < static_cast<uint32_t>(seconds) * 1000) {
+    if (i2s_read(I2S_NUM_0, buffer, sizeof(buffer), &got, pdMS_TO_TICKS(500)) != ESP_OK) break;
+    if (got == 0) continue;
+    file.write(buffer, got);
+    written += got;
+  }
+  stopPdm();
+  if (written == 0) {
+    file.close();
+    storage->remove(path);
+    return false;
+  }
+  writeWavHeader(file, written);
+  file.close();
+  Serial.printf("[fixed] recorded %u bytes\n", static_cast<unsigned>(written));
+  return true;
 }
 
 void recordNow() {
@@ -646,6 +751,18 @@ void loop() {
       recordNow();
     } else if (command == 'h') {
       hardwareCheck();
+    } else if (command == 'c' && !connected) {
+      clearRecordings();
+    } else if (command == 'f' && !connected) {
+      Serial.println("[fixed] manual fixed record requested");
+      const String path = "/recordings/fixed_" + String(static_cast<uint32_t>(millis())) + ".wav";
+      if (recordFixed(path, 5)) {
+        const String id = "GYL-ESP32S3-" + String(static_cast<uint32_t>(ESP.getEfuseMac()), HEX) +
+                          ":fixed:" + String(millis());
+        writeSidecar(path, ".id", id);
+        writeSidecar(path, ".sha256", sha256File(path));
+        selectCurrentFile(path);
+      }
     }
   }
 
