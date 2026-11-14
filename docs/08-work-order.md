@@ -80,7 +80,7 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 | W-25 | 삭제·내보내기 API + 감사 로그 | W-13, W-19 | 권한·감사 근거 테스트 | `DONE` — export/me delete/purge/audit, ADR-0012 |
 | W-26 | 백업/복구 절차·리허설 | W-09 | 복구 리허설 기록 | `DONE` |
 | W-27 | 관측성(로그·메트릭·traceId) | W-15 | 대시보드·알림 최소 세트 | `DONE` |
-| W-28 | 부하/지연 목표 측정 | W-15, W-18 | 목표 대비 측정표 | `PARTIAL` — API/DB 기준선 측정(120건·동시성 20), 실제 provider·10k 규모 대기 |
+| W-28 | 부하/지연 목표 측정 | W-15, W-18 | 목표 대비 측정표 | `PARTIAL` — 120/10k 측정, 검색 p95 175ms 달성. 실제 provider 대기 |
 | W-29 | 릴리스 체크리스트·수용 테스트 | W-01~W-28 | 스펙 MVP 수용 기준 전체 통과 | `BLOCKED` — 로컬 8/8 통과, `docs/15-release-checklist.md` 차단 10건 |
 
 ## 4. 지금 위치
@@ -88,7 +88,7 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 - 완료: Track 0, Track 1, W-10~W-18, W-20, W-22(ESP32-S3), W-25(삭제·내보내기·감사), W-26, W-27
 - 부분: W-19 — 서버 세션·iOS 로그인 UI(실기기 대기), W-21 — PDM/LittleFS(VAD·SD·전원차단 대기), W-23 — iOS 빌드·수신기(실기기 대기)
 - 실기기: ESP32-S3 개발 보드로 BLE 전송·재개까지 검증. nRF52840 전환 시 재검증 필요
-- 다음(차단): W-21 실물(Sense/microSD/VAD) · W-24 iPhone · W-28 실 provider/10k
+- 다음(차단): W-21 실물(microSD/VAD 튜닝) · W-24 iPhone · W-28 실 provider 재측정
 - 릴리스: **NO-GO** — `docs/15-release-checklist.md` 의 차단 목록 해소 후 재판정
 
 ## 5. 하지 말아야 할 순서

@@ -631,47 +631,82 @@ export class PostgresStore implements Store {
       );
     }
 
-    let scoreSelect = "NULL::double precision AS score";
-    let joinEmbedding = "";
-    let searchFilter = "";
     if (filter.q) {
+      // 키워드 후보를 먼저 좁히고(trigram GIN), 의미 후보는 HNSW top-K 로 가져와 합친다.
       params.push(`%${escapeLike(filter.q)}%`);
       const pattern = `$${params.length}`;
       const textHit = `(c.title ILIKE ${pattern} ESCAPE '\\'
         OR c.summary ILIKE ${pattern} ESCAPE '\\'
         OR EXISTS (SELECT 1 FROM transcript_segments ts
                    WHERE ts.conversation_id = c.id AND ts.text ILIKE ${pattern} ESCAPE '\\'))`;
-      joinEmbedding = "LEFT JOIN conversation_embeddings ce ON ce.conversation_id = c.id";
-      const semantic = filter.queryVector
-        ? (() => {
-            params.push(toVector(filter.queryVector));
-            return `COALESCE(1 - (ce.embedding <=> $${params.length}::vector), 0)`;
-          })()
-        : "0";
-      scoreSelect = `GREATEST((CASE WHEN ${textHit} THEN 1.0 ELSE 0 END), ${semantic}) AS score`;
-      searchFilter = "WHERE score >= 0.35";
+
+      let semanticCte = `SELECT NULL::uuid AS id, 0::double precision AS score WHERE false`;
+      let unionSemantic = "";
+      if (filter.queryVector) {
+        params.push(toVector(filter.queryVector));
+        const vector = `$${params.length}::vector`;
+        const topK = Math.max(200, filter.size * 10);
+        params.push(topK);
+        const k = `$${params.length}`;
+        semanticCte = `SELECT ce.conversation_id AS id,
+             (1 - (ce.embedding <=> ${vector}))::double precision AS score
+           FROM conversation_embeddings ce
+           JOIN conversations c ON c.id = ce.conversation_id
+           WHERE ${conditions.join(" AND ")}
+           ORDER BY ce.embedding <=> ${vector}
+           LIMIT ${k}`;
+        unionSemantic = "UNION ALL SELECT * FROM semantic";
+      }
+
+      params.push(filter.size, (filter.page - 1) * filter.size);
+      const limitIndex = params.length - 1;
+      const offsetIndex = params.length;
+      const { rows } = await this.pool.query(
+        `WITH keyword AS (
+           SELECT c.id, 1.0::double precision AS score
+           FROM conversations c
+           WHERE ${conditions.join(" AND ")} AND ${textHit}
+         ),
+         semantic AS (
+           ${semanticCte}
+         ),
+         combined AS (
+           SELECT id, max(score) AS score
+           FROM (SELECT * FROM keyword ${unionSemantic}) candidates
+           GROUP BY id
+         )
+         SELECT ${CONVERSATION_COLUMNS.split(",").map((c) => `c.${c.trim()}`).join(", ")},
+                combined.score, count(*) OVER() AS total
+         FROM combined
+         JOIN conversations c ON c.id = combined.id
+         WHERE combined.score >= 0.35
+         ORDER BY combined.score DESC, c.started_at DESC, c.id DESC
+         LIMIT $${limitIndex} OFFSET $${offsetIndex}`,
+        params,
+      );
+      return this.mapConversationPage(rows, true);
     }
 
     params.push(filter.size, (filter.page - 1) * filter.size);
     const limitIndex = params.length - 1;
     const offsetIndex = params.length;
-
     const { rows } = await this.pool.query(
-      `WITH filtered AS (
-         SELECT ${CONVERSATION_COLUMNS.split(",").map((c) => `c.${c.trim()}`).join(", ")}, ${scoreSelect}
-         FROM conversations c
-         ${joinEmbedding}
-         WHERE ${conditions.join(" AND ")}
-       )
-       SELECT *, count(*) OVER() AS total FROM filtered
-       ${searchFilter}
-       ORDER BY ${filter.q ? "score DESC," : ""} started_at DESC, id DESC
+      `SELECT ${CONVERSATION_COLUMNS.split(",").map((c) => `c.${c.trim()}`).join(", ")},
+              count(*) OVER() AS total
+       FROM conversations c
+       WHERE ${conditions.join(" AND ")}
+       ORDER BY c.started_at DESC, c.id DESC
        LIMIT $${limitIndex} OFFSET $${offsetIndex}`,
       params,
     );
+    return this.mapConversationPage(rows);
+  }
 
+  private async mapConversationPage(
+    rows: Row[],
+    includeScore = false,
+  ): Promise<Paged<ConversationListItem>> {
     if (rows.length === 0) return { items: [], total: 0 };
-
     const ids = rows.map((row) => row.id);
     const [peopleLinks, linkRows] = await Promise.all([
       this.pool.query(
@@ -709,7 +744,7 @@ export class PostgresStore implements Store {
       conversation: mapConversation(row),
       people: peopleByConversation.get(row.id) ?? [],
       recordingIds: linksByConversation.get(row.id) ?? [],
-      ...(filter.q ? { score: Number(row.score ?? 0) } : {}),
+      ...(includeScore ? { score: Number(row.score ?? 0) } : {}),
     }));
 
     return { items, total };

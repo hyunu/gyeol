@@ -34,7 +34,7 @@ BENCH_CONVERSATIONS=1000 BENCH_CONCURRENCY=50 BENCH_DURATION_MS=10000 npm run be
 | 키워드 검색 | 4,242 | 1,414 | 13.5ms | 19.7ms | 22.7ms | 0 |
 | 기기 목록 | 15,595 | 5,198 | 3.6ms | 5.5ms | 7.1ms | 0 |
 
-### 10,000건
+### 10,000건 (인덱스 전)
 
 | 시나리오 | 요청 수 | RPS | p50 | p95 | p99 | 오류 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -42,6 +42,15 @@ BENCH_CONVERSATIONS=1000 BENCH_CONCURRENCY=50 BENCH_DURATION_MS=10000 npm run be
 | 대화 상세 | 4,914 | 1,638 | 11.2ms | 19.0ms | 26.3ms | 0 |
 | 키워드 검색(전체 일치) | 200 | 67 | 297.8ms | 457.7ms | 482.6ms | 0 |
 | 기기 목록 | 13,149 | 4,383 | 4.1ms | 7.4ms | 11.4ms | 0 |
+
+### 10,000건 (trigram + HNSW 적용 후, D-07)
+
+| 시나리오 | 요청 수 | RPS | p50 | p95 | p99 | 오류 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 대화 목록 | 1,889 | 630 | 31.0ms | 40.7ms | 47.5ms | 0 |
+| 키워드 검색(광범위) | 463 | 154 | 126.9ms | 175.2ms | 190.4ms | 0 |
+| 키워드 검색(1건 일치) | 489 | 163 | 119.8ms | 176.9ms | 201.9ms | 0 |
+| 기기 목록 | 14,388 | 4,796 | 3.9ms | 5.9ms | 8.0ms | 0 |
 
 trigram 인덱스 실험(`BENCH_INDEX=1`, `pg_trgm` GIN on title/summary/segment):
 
@@ -59,7 +68,7 @@ trigram 인덱스 실험(`BENCH_INDEX=1`, `pg_trgm` GIN on title/summary/segment
   1. 키워드 후보를 먼저 좁히는 CTE + trigram/GIN,
   2. 의미 검색은 HNSW `ORDER BY embedding <=> $vec LIMIT k` 로 top-K 만 결합,
   3. 두 결과를 UNION 후 점수 필터·페이지 적용.
-- 이는 D-07(한국어 검색)과 ENV-07(pgvector 인덱스) 결정이 필요한 후속 작업이다.
+- D-07 결정(ADR-0013)에 따라 trigram + HNSW top-K 로 쿼리를 재구성해 검색 p95를 175ms로 낮췄다.
 
 
 | 시나리오 | 요청 수 | RPS | p50 | p95 | p99 | 오류 |
@@ -92,7 +101,7 @@ trigram 인덱스 실험(`BENCH_INDEX=1`, `pg_trgm` GIN on title/summary/segment
 
 ## 5. 다음 측정
 
-1. D-07 결정 후 키워드 prefilter + HNSW top-K 로 쿼리 재구성, p95 목표 재측정.
+1. `hnsw.ef_search` 재현율 튜닝, 2글자 검색 대응.
 2. 실제 AI provider 의 `/v1/analyze` 지연·비용 측정 (ENV-05).
 3. export(대용량)와 동시 업로드 시나리오.
 4. TLS·리버스 프록시·다중 인스턴스 환경.

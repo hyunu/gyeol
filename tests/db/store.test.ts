@@ -273,6 +273,18 @@ test("대화 목록: 인물·기간·키워드 검색과 페이지", async () =>
   const none = await store.listConversations({ userId, q: "존재하지않는단어", page: 1, size: 10 });
   assert.equal(none.total, 0);
 
+  // 키워드가 없어도 의미 후보(HNSW top-K)로 찾는다.
+  const vector = Array.from({ length: 768 }, (_, index) => (index === 0 ? 1 : 0));
+  const semantic = await store.listConversations({
+    userId,
+    q: "존재하지않는단어",
+    queryVector: vector,
+    page: 1,
+    size: 10,
+  });
+  assert.equal(semantic.total, 3);
+  assert.ok(semantic.items.every((item) => (item.score ?? 0) >= 0.35));
+
   const page = await store.listConversations({ userId, page: 1, size: 2 });
   assert.equal(page.total, 3);
   assert.equal(page.items.length, 2);

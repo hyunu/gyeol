@@ -45,6 +45,7 @@ gyeol/
 │   ├── migrations/0002_analysis_jobs.sql  # 비동기 분석 작업 큐 (ADR-0007)
 │   ├── migrations/0003_sessions.sql       # Apple 세션 (ADR-0010)
 │   ├── migrations/0004_audit_events.sql   # 감사 로그 (W-25)
+│   ├── migrations/0005_search_indexes.sql # trigram + HNSW (D-07)
 │   ├── checks/*.sql                # 제약 실동작 검증
 │   └── README.md
 ├── deploy/docker-compose.yml       # pgvector·MinIO 로컬 서비스
@@ -71,7 +72,7 @@ gyeol/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~15, adr/0001~0012)
+├── docs/ (00~15, adr/0001~0013)
 ├── tools/ (codec 측정, BLE 프로브는 firmware/esp32s3/tools)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```

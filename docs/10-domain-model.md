@@ -213,7 +213,7 @@ erDiagram
 | `confidence` | numeric(4,3) | Y | CHECK 0..1 | STT 신뢰도 |
 | `created_at` | timestamptz | N | `now()` | |
 
-- 검색용 `tsvector` 파생 컬럼/인덱스는 D-07 확정 후 추가.
+- 검색은 trigram(키워드) + HNSW(의미)로 동작한다(ADR-0013). 형태소 `tsvector`는 후속 검토.
 
 ### 3.8 `persons`
 
@@ -407,7 +407,8 @@ erDiagram
 | 열린 세션 1개 | `unique(recording_id) WHERE status='open'` |
 | 인물별 기록 | `speaker_clusters(person_id)`, `(conversation_id)` |
 | 할 일 | `action_items(conversation_id, status)` |
-| 의미 검색 | 벡터 인덱스 — D-05 확정 후 (`hnsw` 우선 검토) |
+| 의미 검색 | `conversation_embeddings USING hnsw (embedding vector_cosine_ops)` |
+| 키워드 검색 | `pg_trgm` GIN: `conversations.title`, `conversations.summary`, `transcript_segments.text` |
 
 ---
 
@@ -607,7 +608,7 @@ erDiagram
 | D-04 | 오디오 코덱 | `codec`, 용량 | **확정: 기기 `wav_ima_adpcm` (16k mono), 테스트 기준 `wav_pcm_s16le` 유지** — `docs/adr/0006-audio-codec.md` |
 | D-05 | 임베딩 모델·차원 | pgvector 컬럼 차원 | **확정: 화자 256 / 텍스트 768**, 모델은 W-18 — `docs/adr/0009-embedding-dimensions.md` |
 | D-06 | 청크 크기·세션 만료 | 이어받기 단위 | 256 KiB / 24h |
-| D-07 | 한국어 검색 방식 | FTS 토크나이저 | `simple` + 키워드 배열 |
+| D-07 | 한국어 검색 방식 | FTS 토크나이저 | **확정: pg_trgm 키워드 + HNSW 의미 top-K** — `docs/adr/0013-korean-search-trigram-hnsw.md` |
 | D-08 | 원본 음성 보존 | purge 정책 | **확정: 분석 종료 후 30일 뒤 원본 purge, 파생 유지** — `docs/adr/0011-retention-30-days.md` |
 | D-09 | VAD 파라미터 | `devices.config` | TBD |
 | D-10 | 분석 이력 보관 | 재분석 이력 | 최신본만 |
