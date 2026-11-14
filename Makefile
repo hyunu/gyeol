@@ -44,6 +44,9 @@ purge: ## 30일 지난 원본·삭제 계정 정리 (GYEOL_STORE=postgres)
 bench: ## API 성능 기준선 (GYEOL_STORE=postgres, DATABASE_URL 필요)
 	npm run --silent bench
 
+acceptance: ## 릴리스 수용 테스트 (DB·S3·E2E·Swift·펌웨어)
+	npm run --silent acceptance -- --with-ios
+
 db-backup: ## 논리 백업 (BACKUP=경로, 기본 .artifacts/backups)
 	npm run --silent db:backup -- $${BACKUP:-}
 

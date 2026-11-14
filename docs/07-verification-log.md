@@ -265,6 +265,25 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 - 실제 provider·10,000건 규모·TLS/프록시·다중 인스턴스는 아직 측정하지 않았다.
 - 상세: `docs/14-performance-baseline.md`.
 
+## 2.14 릴리스 수용 테스트 (W-29, 2026-11-14)
+
+`npm run acceptance -- --with-ios` 로 8개 검증을 한 번에 실행했다.
+
+| 검증 | 결과 | 시간 |
+| --- | --- | ---: |
+| 계약 + 타입 + 단위/통합 | PASS | 3.1s |
+| DB 마이그레이션 제약 | PASS | 0.4s |
+| PostgreSQL 패리티 | PASS | 2.3s |
+| S3/MinIO | PASS | 1.5s |
+| 웹 E2E | PASS | 7.2s |
+| Swift BLE 패키지 | PASS | 3.9s |
+| 펌웨어 빌드 | PASS | 2.1s |
+| iOS 시뮬레이터 빌드 | PASS | 4.0s |
+
+- **8/8 통과**, 0 실패.
+- 릴리스 판정은 **NO-GO** 다. 실물·실 provider·배포 인증서 등 10개 차단 항목은
+  `docs/15-release-checklist.md` 에 정리했다.
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |

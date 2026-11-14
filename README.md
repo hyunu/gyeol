@@ -29,6 +29,7 @@
 | ESP32-S3 펌웨어 | 개발 변형 — PDM 녹음·BLE 전송·중단 재개 SHA 일치 (`firmware/esp32s3`) |
 | 삭제·내보내기·감사 | 완료 — `GET /export`, `DELETE /me`(30일 유예), `audit_events`, `npm run purge` |
 | 성능 기준선 | 1차 측정 — p95 15~20ms(120건·동시성 20, Fake AI). 실제 provider·10k 대기 |
+| 릴리스 | **NO-GO** — 로컬 수용 8/8, 실물·실 provider·배포 인증서 차단 (`docs/15-release-checklist.md`) |
 | 백업/복구 | 완료 — `db:backup`·복구 리허설 통과 (`docs/11-backup-restore.md`) |
 | 실물 웨어러블 | **HW-PENDING** — ESP32-S3 개발 보드로 PDM·BLE 전송·재개 검증 |
 | iOS 앱 | **PARTIAL** — 시뮬레이터 빌드·수신기 13 tests, 실기기 E2E 대기 |
@@ -159,4 +160,6 @@ GYEOL_STORE=postgres DATABASE_URL=... npm run purge   # 30일 경과 원본·계
 
 1. iOS 실기기 E2E (W-24) · VAD/microSD (W-21)
 2. 실제 AI provider 연결 (ENV-05) · 부하/지연 측정 (W-28)
-3. nRF52840 포팅·배포 인증서 (HW-PENDING)
+3. nRF52840 Sense·microSD·VAD 실측 (HW-PENDING)
+4. Apple 실 토큰·실기기 E2E·배포 인증서, 실제 AI provider
+5. 차단 목록 해소 후 `make acceptance` 재실행 → 릴리스 판정
