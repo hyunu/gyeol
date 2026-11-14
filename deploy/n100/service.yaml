@@ -1,0 +1,42 @@
+schema_version: 1
+service:
+  id: gyeol
+  name: GYEOL
+  description: 웨어러블 대화 기억 서비스 — React 대시보드, Node API, PostgreSQL(pgvector). 데모는 Basic Auth로 보호된다.
+  category: web
+  version: "0.2.0"
+deployment:
+  type: docker-compose
+  compose_file: compose.yaml
+endpoints:
+  - name: web
+    type: http
+    exposure: host
+    host_port: 18080
+    container: web
+    container_port: 80
+containers:
+  - name: web
+    role: frontend
+    required: true
+  - name: api
+    role: backend
+    required: true
+  - name: db
+    role: database
+    required: true
+resources:
+  memory_limit_mb: 1024
+volumes:
+  - name: gyeol-pgdata
+    purpose: PostgreSQL 데이터
+    backup_required: true
+  - name: gyeol-storage
+    purpose: 업로드 원본 오디오
+    backup_required: true
+operations:
+  healthcheck_required: true
+  backup_required: true
+  restart_policy: unless-stopped
+security:
+  expose_database: false

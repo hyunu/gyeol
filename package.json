@@ -16,6 +16,7 @@
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:checks": "node scripts/db-checks.mjs",
     "purge": "node scripts/purge.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs",
     "bench": "node scripts/bench.mjs",
     "acceptance": "node scripts/acceptance.mjs",
     "db:backup": "node scripts/db-backup.mjs",
