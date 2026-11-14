@@ -12,7 +12,7 @@
 | 칩 | ESP32-S3 QFN56 rev v0.2, 8MB PSRAM |
 | USB | USB-Serial/JTAG (`303A:1001`), `/dev/cu.usbmodem1101` |
 | PDM 마이크 | CLK GPIO42, DATA GPIO41 |
-| microSD | CS 21, SCK 7, MISO 8, MOSI 9 (마운트 실패 시 LittleFS 폴백) |
+| microSD | CS 21, SCK 7, MISO 8, MOSI 9 (8/4/1 MHz 재시도, 실패 시 LittleFS 폴백) |
 
 ## 빌드·업로드
 
@@ -68,7 +68,7 @@ LittleFS 호출 중 스택 오버플로가 있어 loopTask 스택을 32KB 로 �
 ## 현재 한계
 
 - **VAD 임계값**: white noise 로는 검증했지만 실제 한국어 음성으로 튜닝하지 않았다.
-- **microSD 미검증**: 카드 미삽입으로 LittleFS 로 대체했다.
+- **microSD 마운트 실패**: 카드 삽입 후에도 `Select Failed`(CMD0 무응답). FAT32·방향·확장 보드 결합·전원 재인가를 확인해야 한다.
 - **nRF52840 아님**: 스펙 대상 보드가 아니므로 `HW-PENDING` 은 유지한다.
 - **microSD 미검증**: 카드가 없어 LittleFS 로 대체했다. SD 핀·전원·내구성은 실카드로 확인해야 한다.
 - **전원 차단 복구**: 리셋(재플래시) 후 동일 파일에서 이어받기를 확인했다. 실제 전원 차단은 별도 측정.

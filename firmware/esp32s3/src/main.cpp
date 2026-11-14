@@ -118,10 +118,22 @@ String sha256File(const String &path) {
 
 bool initStorage() {
   SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
-  if (SD.begin(PIN_SD_CS, SPI, 8000000)) {
-    storage = &SD;
-    Serial.printf("[storage] SD mounted, card=%llu MB\n", SD.cardSize() / (1024ULL * 1024ULL));
-  } else {
+  const uint32_t rates[] = {8000000, 4000000, 1000000};
+  bool mounted = false;
+  for (uint32_t rate : rates) {
+    Serial.printf("[storage] SD 시도 %u Hz\n", static_cast<unsigned>(rate));
+    if (SD.begin(PIN_SD_CS, SPI, rate)) {
+      mounted = true;
+      storage = &SD;
+      Serial.printf("[storage] SD mounted, card=%llu MB at %u Hz\n",
+                    SD.cardSize() / (1024ULL * 1024ULL), static_cast<unsigned>(rate));
+      break;
+    }
+    SD.end();
+    delay(100);
+  }
+
+  if (!mounted) {
     Serial.println("[storage] SD 없음 → LittleFS 사용");
     if (!LittleFS.begin(true)) {
       Serial.println("[storage] LittleFS mount failed");
