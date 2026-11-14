@@ -571,6 +571,36 @@ void startBle() {
 }
 
 
+
+void hardwareCheck() {
+  const char *kind = storage == &SD ? "SD" : storage == &LittleFS ? "LittleFS" : "none";
+  Serial.printf("[hw] storage=%s\n", kind);
+  if (storage == &SD) {
+    Serial.printf("[hw] card=%llu MB\n", SD.cardSize() / (1024ULL * 1024ULL));
+  }
+  if (!initPdm()) {
+    Serial.println("[hw] PDM init failed");
+    return;
+  }
+  uint8_t buffer[640];
+  size_t got = 0;
+  double sum = 0;
+  double peak = 0;
+  int frames = 0;
+  const uint32_t started = millis();
+  while (millis() - started < 2000) {
+    if (i2s_read(I2S_NUM_0, buffer, sizeof(buffer), &got, pdMS_TO_TICKS(200)) != ESP_OK) break;
+    if (got == 0) continue;
+    const double energy = frameEnergy(buffer, got);
+    sum += energy;
+    if (energy > peak) peak = energy;
+    frames += 1;
+  }
+  stopPdm();
+  Serial.printf("[hw] PDM frames=%d mean=%.0f peak=%.0f\n", frames,
+                frames > 0 ? sum / frames : 0, peak);
+}
+
 void recordNow() {
   if (storage == nullptr) return;
   const String path = "/recordings/rec_" + String(static_cast<uint32_t>(millis())) + ".wav";
@@ -614,6 +644,8 @@ void loop() {
     if (command == 'r' && !connected) {
       Serial.println("[vad] manual record requested");
       recordNow();
+    } else if (command == 'h') {
+      hardwareCheck();
     }
   }
 

@@ -234,8 +234,8 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 - MTU 247 에서 알림이 244바이트로 잘리므로 **청크 220** 으로 조정했다. 이전 240 은
   프레임이 잘려 CRC 오류가 났다.
 - ACK 배칭·창 8 적용 후 160KB 전송이 약 28초 → 14초로 줄었다.
-- 보드는 XIAO ESP32S3 + Exp. Board v1.1(Sense 키트)로 확인됐다. 테스트 시 확장 보드 분리/카드
-  미삽입으로 PDM·SD 가 동작하지 않아 VAD 실입력 검증은 보류했다.
+- 보드는 XIAO ESP32S3 + Exp. Board v1.1(Sense 키트). `h` 로 PDM 100프레임 mean 1716/peak 6706 확인.
+  실제 음성 VAD 트리거와 microSD(카드 미삽입)는 아직 검증하지 못했다.
 - iOS 실기기 CoreBluetooth E2E, VAD, microSD 카드, nRF52840 포팅은 아직 `HW-PENDING`.
 
 ## 2.12 삭제·내보내기·감사 (W-25, 2026-11-14)

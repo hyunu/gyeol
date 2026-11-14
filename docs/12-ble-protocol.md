@@ -161,6 +161,6 @@
 - 프레임이 244바이트를 넘으면 ESP32 BLE 스택이 알림을 잘라 CRC 가 깨진다. **청크 220** 은
   이 제약에서 나온 값이다.
 - 전송 시간은 160KB 기준 약 14초(재개 포함). ACK 배칭과 창 8 적용 후 측정했다.
-- 보드는 **XIAO ESP32S3 + Exp. Board v1.1(Sense 키트)** 로 확인됐다. 다만 테스트 시 확장 보드가
-  분리돼 있었거나 SD 카드가 없어 PDM·microSD 가 동작하지 않았다. 결합·카드 삽입 후 재검증한다.
+- 보드는 **XIAO ESP32S3 + Exp. Board v1.1(Sense 키트)**. PDM 입력은 확인(peak 6706),
+  microSD 는 카드 미삽입으로 LittleFS 를 사용했다. 실제 음성 VAD·SD 마운트는 재검증 대상이다.
 - 실제 nRF52840·iOS CoreBluetooth·microSD 카드·VAD 는 아직 `HW-PENDING` 이다.
