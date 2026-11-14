@@ -227,12 +227,15 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 | 2 | SD 없음 → LittleFS 폴백, 재부팅 후 파일 유지 | 동일 | 통과 |
 | 3 | BLE 160,300 bytes 전송, SHA-256 일치 | `tools/ble_probe.py` | 통과 |
 | 4 | 50,160 bytes 에서 중단 → 재접속 후 재개, 최종 SHA 일치 | 동일 | 통과 |
+| 4b | 기기 재부팅(재플래시) 후 같은 파일에서 재개, 최종 SHA 일치 | 동일 | 통과 |
 | 5 | Swift 프레임·수신기·스트림 재조립 13 tests | `apps/ios/Packages/GyeolBLE` | 통과 |
 | 6 | iOS 앱 시뮬레이터 빌드(서명 없이) | `xcodebuild ... CODE_SIGNING_ALLOWED=NO` | 통과 |
 
 - MTU 247 에서 알림이 244바이트로 잘리므로 **청크 220** 으로 조정했다. 이전 240 은
   프레임이 잘려 CRC 오류가 났다.
 - ACK 배칭·창 8 적용 후 160KB 전송이 약 28초 → 14초로 줄었다.
+- VAD(에너지·프리롤·무음 컷)는 구현했지만 연결된 보드의 PDM 입력이 무음에 가까워 실검증하지 못했다.
+  SD/PDM 미동작으로 **Sense 변형이 아닐 가능성**이 있다.
 - iOS 실기기 CoreBluetooth E2E, VAD, microSD 카드, nRF52840 포팅은 아직 `HW-PENDING`.
 
 ## 2.12 삭제·내보내기·감사 (W-25, 2026-11-14)

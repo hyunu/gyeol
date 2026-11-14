@@ -132,7 +132,7 @@ bool initStorage() {
   return true;
 }
 
-bool recordPdm(const String &path) {
+bool initPdm() {
   i2s_config_t config = {};
   config.mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_PDM);
   config.sample_rate = SAMPLE_RATE;
@@ -150,7 +150,6 @@ bool recordPdm(const String &path) {
     Serial.println("[pdm] driver install failed");
     return false;
   }
-
   i2s_pin_config_t pins = {};
   pins.mck_io_num = I2S_PIN_NO_CHANGE;
   pins.bck_io_num = I2S_PIN_NO_CHANGE;
@@ -162,33 +161,119 @@ bool recordPdm(const String &path) {
     i2s_driver_uninstall(I2S_NUM_0);
     return false;
   }
+  return true;
+}
 
-  if (storage == nullptr) return false;
+void stopPdm() { i2s_driver_uninstall(I2S_NUM_0); }
+
+double frameEnergy(const uint8_t *bytes, size_t length) {
+  const int16_t *samples = reinterpret_cast<const int16_t *>(bytes);
+  const size_t count = length / 2;
+  if (count == 0) return 0;
+  double sum = 0;
+  for (size_t i = 0; i < count; ++i) sum += fabs(static_cast<double>(samples[i]));
+  return sum / count;
+}
+
+// 에너지 기반 VAD: 0.5초 프리롤, 3프레임 연속 임계 초과 시 시작, 2초 무음 시 종료.
+bool recordVadClip(const String &path, int maxSeconds) {
+  constexpr int FRAME_SAMPLES = 320;  // 20ms
+  constexpr int FRAME_BYTES = FRAME_SAMPLES * 2;
+  constexpr int PREROLL_FRAMES = 25;
+  constexpr int SILENCE_MS = 2000;
+  constexpr size_t MIN_BYTES = 32000;   // 1초
+  constexpr size_t MAX_BYTES = 600000;  // LittleFS 보호
+
+  if (!initPdm()) return false;
   File file = storage->open(path, FILE_WRITE);
   if (!file) {
-    i2s_driver_uninstall(I2S_NUM_0);
+    stopPdm();
     return false;
   }
   writeWavHeader(file, 0);
 
-  const size_t targetBytes = SAMPLE_RATE * 2 * RECORD_SECONDS;
+  uint8_t buffer[FRAME_BYTES];
+  size_t got = 0;
+
+  // 0.5초 캘리브레이션. 시작 과도음을 피하려고 뒤쪽 10프레임만 사용한다.
+  double energies[PREROLL_FRAMES];
+  int calibrated = 0;
+  for (int i = 0; i < PREROLL_FRAMES; ++i) {
+    if (i2s_read(I2S_NUM_0, buffer, FRAME_BYTES, &got, pdMS_TO_TICKS(500)) != ESP_OK) break;
+    if (got == 0) continue;
+    energies[calibrated % PREROLL_FRAMES] = frameEnergy(buffer, got);
+    calibrated += 1;
+  }
+  double noiseFloor = 0;
+  const int noiseSamples = min(calibrated, 10);
+  for (int i = 0; i < noiseSamples; ++i) noiseFloor += energies[(calibrated - 1 - i) % PREROLL_FRAMES];
+  noiseFloor = noiseSamples > 0 ? noiseFloor / noiseSamples : 0;
+  const double threshold = max(400.0, noiseFloor * 1.6);
+  Serial.printf("[vad] noise=%.0f threshold=%.0f\n", noiseFloor, threshold);
+
+  std::vector<std::vector<int16_t>> preroll;
+  bool recording = false;
+  int speechRun = 0;
+  int silenceMs = 0;
   size_t written = 0;
-  uint8_t buffer[512];
-  const uint32_t started = millis();
-  while (written < targetBytes && millis() - started < RECORD_SECONDS * 1500) {
-    size_t bytesRead = 0;
-    if (i2s_read(I2S_NUM_0, buffer, sizeof(buffer), &bytesRead, pdMS_TO_TICKS(500)) != ESP_OK) break;
-    if (bytesRead == 0) continue;
-    file.write(buffer, bytesRead);
-    written += bytesRead;
+  double maxEnergy = 0;
+  uint32_t lastVadLog = 0;
+  const uint32_t startedAt = millis();
+
+  while (static_cast<int>(millis() - startedAt) < maxSeconds * 1000) {
+    if (i2s_read(I2S_NUM_0, buffer, FRAME_BYTES, &got, pdMS_TO_TICKS(500)) != ESP_OK) break;
+    if (got == 0) continue;
+    const double energy = frameEnergy(buffer, got);
+    if (energy > maxEnergy) maxEnergy = energy;
+    if (millis() - lastVadLog > 1000) {
+      Serial.printf("[vad] energy=%.0f max=%.0f recording=%d\n", energy, maxEnergy, recording ? 1 : 0);
+      lastVadLog = millis();
+    }
+
+    if (!recording) {
+      std::vector<int16_t> frame(reinterpret_cast<int16_t *>(buffer),
+                                 reinterpret_cast<int16_t *>(buffer) + got / 2);
+      preroll.push_back(frame);
+      if (preroll.size() > PREROLL_FRAMES) preroll.erase(preroll.begin());
+      if (energy > threshold) speechRun += 1;
+      else speechRun = 0;
+      if (speechRun >= 3) {
+        recording = true;
+        speechRun = 0;
+        for (const auto &saved : preroll) {
+          file.write(reinterpret_cast<const uint8_t *>(saved.data()), saved.size() * 2);
+          written += saved.size() * 2;
+        }
+        preroll.clear();
+        Serial.println("[vad] speech start");
+      }
+    } else {
+      file.write(buffer, got);
+      written += got;
+      if (energy < threshold) silenceMs += 20;
+      else silenceMs = 0;
+      if (silenceMs >= SILENCE_MS) {
+        Serial.println("[vad] silence stop");
+        break;
+      }
+      if (written >= MAX_BYTES) {
+        Serial.println("[vad] max size");
+        break;
+      }
+    }
   }
 
-  file.seek(0);
+  stopPdm();
+  if (written < MIN_BYTES) {
+    file.close();
+    storage->remove(path);
+    Serial.printf("[vad] too short (%u bytes)\n", static_cast<unsigned>(written));
+    return false;
+  }
   writeWavHeader(file, written);
   file.close();
-  i2s_driver_uninstall(I2S_NUM_0);
-  Serial.printf("[pdm] recorded %u bytes\n", static_cast<unsigned>(written));
-  return written > 0;
+  Serial.printf("[vad] recorded %u bytes\n", static_cast<unsigned>(written));
+  return true;
 }
 
 // PDM 이 없거나 실패하면 전송 검증용 사인파를 만든다.
@@ -485,6 +570,23 @@ void startBle() {
   Serial.printf("[ble] advertising as %s\n", name.c_str());
 }
 
+
+void recordNow() {
+  if (storage == nullptr) return;
+  const String path = "/recordings/rec_" + String(static_cast<uint32_t>(millis())) + ".wav";
+  bool ok = recordVadClip(path, 20);
+  if (!ok) {
+    writeTestWav(path);
+    ok = true;
+  }
+  if (!ok) return;
+  const String id =
+      "GYL-ESP32S3-" + String(static_cast<uint32_t>(ESP.getEfuseMac()), HEX) + ":" + String(millis());
+  writeSidecar(path, ".id", id);
+  writeSidecar(path, ".sha256", sha256File(path));
+  selectCurrentFile(path);
+}
+
 }  // namespace
 
 void setup() {
@@ -497,25 +599,24 @@ void setup() {
   } else {
     String path = firstRecording();
     if (path.isEmpty()) {
-      const String base = "/recordings/rec_" + String(static_cast<uint32_t>(millis()));
-      path = base + ".wav";
-      bool ok = recordPdm(path);
-      if (!ok) {
-        path = base + ".wav";
-        writeTestWav(path);
-      }
-      const String id =
-          "GYL-ESP32S3-" + String(static_cast<uint32_t>(ESP.getEfuseMac()), HEX) + ":" + String(millis());
-      writeSidecar(path, ".id", id);
-      writeSidecar(path, ".sha256", sha256File(path));
+      recordNow();
+    } else {
+      selectCurrentFile(path);
     }
-    selectCurrentFile(path);
   }
 
   startBle();
 }
 
 void loop() {
+  if (Serial.available()) {
+    const int command = Serial.read();
+    if (command == 'r' && !connected) {
+      Serial.println("[vad] manual record requested");
+      recordNow();
+    }
+  }
+
   if (rxQueue != nullptr) {
     std::vector<uint8_t> *item = nullptr;
     while (xQueueReceive(rxQueue, &item, 0) == pdTRUE) {

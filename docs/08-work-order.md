@@ -68,8 +68,8 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 | ID | 작업 | 선행 | 완료 조건 | 상태 |
 | --- | --- | --- | --- | --- |
 | W-20 | BLE GATT 프로토콜 계약 | W-09 | 프레임·ACK·재전송·이어받기 명세 + 시뮬레이터 테스트 | `DONE` |
-| W-21 | 펌웨어 PDM·VAD·microSD | W-20 | 오프라인 누적·전원 차단 복구 시나리오 | `PARTIAL(ESP32-S3)` — PDM 5초 녹음·LittleFS 저장 검증, VAD·SD·전원차단 미검증 |
-| W-22 | 펌웨어 BLE 전송 | W-21 | 중단/재개 무손실·해시 일치 | `DONE(ESP32-S3)` — 160,300 bytes SHA 일치, 50,160 bytes 중단 후 재개. nRF52840은 대기 |
+| W-21 | 펌웨어 PDM·VAD·microSD | W-20 | 오프라인 누적·전원 차단 복구 시나리오 | `PARTIAL(ESP32-S3)` — VAD 코드·LittleFS·재부팅 유지 검증. PDM 실입력·SD·전원차단 미검증 |
+| W-22 | 펌웨어 BLE 전송 | W-21 | 중단/재개 무손실·해시 일치 | `DONE(ESP32-S3)` — 160,300 bytes SHA 일치, 중단·재부팅 후 재개. nRF52840은 대기 |
 | W-23 | iOS CoreBluetooth 수신 | W-20 | Fake 기기로 수신·재개 검증 | `PARTIAL(빌드)` — Swift 수신기 13 tests·시뮬레이터 빌드. 실기기 E2E 대기 |
 | W-24 | iOS 분석 실행·서버 업로드 | W-23, W-18 | 전 구간 E2E + 실측 기록 | `HW-PENDING` |
 
