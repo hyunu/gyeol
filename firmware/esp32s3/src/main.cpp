@@ -653,9 +653,62 @@ void clearRecordings() {
   Serial.printf("[storage] cleared, free=%u bytes\n", static_cast<unsigned>(storageFreeBytes()));
 }
 
+
+// SD 카드의 SPI 응답을 확인한다. CMD0=0x01, CMD8=0x01 이면 카드/배선 정상.
+void sdProbePin(int cs, const char *label) {
+  pinMode(cs, OUTPUT);
+  digitalWrite(cs, HIGH);
+  SPI.beginTransaction(SPISettings(400000, MSBFIRST, SPI_MODE0));
+  for (int i = 0; i < 10; ++i) SPI.transfer(0xFF);
+  const uint8_t idle = SPI.transfer(0xFF);
+
+  digitalWrite(cs, LOW);
+  const uint8_t cmd0[6] = {0x40, 0x00, 0x00, 0x00, 0x00, 0x95};
+  for (uint8_t byte : cmd0) SPI.transfer(byte);
+  int r0 = -1;
+  for (int i = 0; i < 8; ++i) {
+    const uint8_t value = SPI.transfer(0xFF);
+    if ((value & 0x80) == 0) {
+      r0 = value;
+      break;
+    }
+  }
+
+  const uint8_t cmd8[6] = {0x48, 0x00, 0x00, 0x01, 0xAA, 0x87};
+  for (uint8_t byte : cmd8) SPI.transfer(byte);
+  int r8 = -1;
+  for (int i = 0; i < 8; ++i) {
+    const uint8_t value = SPI.transfer(0xFF);
+    if ((value & 0x80) == 0) {
+      r8 = value;
+      break;
+    }
+  }
+  uint8_t r7[4] = {0, 0, 0, 0};
+  if (r8 >= 0) {
+    for (int i = 0; i < 4; ++i) r7[i] = SPI.transfer(0xFF);
+  }
+
+  digitalWrite(cs, HIGH);
+  SPI.transfer(0xFF);
+  SPI.endTransaction();
+  Serial.printf("[sd] %s cs=%d idle=0x%02X CMD0=0x%02X CMD8=0x%02X R7=%02X%02X%02X%02X\n",
+                label, cs, idle, r0 < 0 ? 0xFF : r0, r8 < 0 ? 0xFF : r8, r7[0], r7[1], r7[2],
+                r7[3]);
+}
+
+void sdProbe() {
+  pinMode(PIN_SD_MISO, INPUT_PULLUP);
+  delay(10);
+  Serial.printf("[sd] MISO pull-up read=%d (1=정상, 0=GND 단락/접촉)\n", digitalRead(PIN_SD_MISO));
+  sdProbePin(PIN_SD_CS, "CS21");
+  sdProbePin(3, "CS3");
+}
+
 void hardwareCheck() {
   const char *kind = storage == &SD ? "SD" : storage == &LittleFS ? "LittleFS" : "none";
   Serial.printf("[hw] storage=%s free=%u bytes\n", kind, static_cast<unsigned>(storageFreeBytes()));
+  if (storage != &SD) sdProbe();
   if (storage == &SD) {
     Serial.printf("[hw] card=%llu MB\n", SD.cardSize() / (1024ULL * 1024ULL));
   }
@@ -763,6 +816,8 @@ void loop() {
       recordNow();
     } else if (command == 'h') {
       hardwareCheck();
+    } else if (command == 's') {
+      sdProbe();
     } else if (command == 'c' && !connected) {
       clearRecordings();
     } else if (command == 'f' && !connected) {
