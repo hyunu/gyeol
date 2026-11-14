@@ -3,6 +3,7 @@ import { uuidv7 } from "../../domain/ids.ts";
 import type {
   ActionItem,
   AnalysisJob,
+  AuditEvent,
   Conversation,
   ConversationDetail,
   Device,
@@ -14,6 +15,8 @@ import type {
   ExtractedEntity,
   UploadSession,
   User,
+  UserAccount,
+  UserStatus,
 } from "../../domain/types.ts";
 import type {
   ConversationFilter,
@@ -57,13 +60,84 @@ export class MemoryStore implements Store {
   private analysisJobs = new Map<string, AnalysisJob>();
   private authSessions = new Map<string, Session>();
   private authSubjects = new Map<string, string>();
+  private accountStatus = new Map<string, { status: UserStatus; deletedAt: Date | null }>();
+  private auditEvents: AuditEvent[] = [];
 
   ensureUser(id: string): Promise<User> {
     const existing = this.users.get(id);
     if (existing) return Promise.resolve(clone(existing));
     const user: User = { id, displayName: `로컬 사용자 ${id.slice(0, 8)}`, createdAt: new Date() };
     this.users.set(id, user);
+    this.accountStatus.set(id, { status: "active", deletedAt: null });
     return Promise.resolve(clone(user));
+  }
+
+  findUserAccount(id: string): Promise<UserAccount | null> {
+    const user = this.users.get(id);
+    if (!user) return Promise.resolve(null);
+    const status = this.accountStatus.get(id) ?? { status: "active" as const, deletedAt: null };
+    return Promise.resolve({ ...clone(user), ...status });
+  }
+
+  markUserDeleted(id: string, at: Date): Promise<void> {
+    if (this.users.has(id)) {
+      this.accountStatus.set(id, { status: "deleted", deletedAt: at });
+    }
+    return Promise.resolve();
+  }
+
+  listUsersPendingPurge(cutoff: Date, limit: number): Promise<UserAccount[]> {
+    const accounts: UserAccount[] = [];
+    for (const [id, user] of this.users) {
+      const status = this.accountStatus.get(id);
+      if (!status || status.status !== "deleted" || !status.deletedAt) continue;
+      if (status.deletedAt.getTime() > cutoff.getTime()) continue;
+      accounts.push({ ...clone(user), ...status });
+    }
+    return Promise.resolve(accounts.slice(0, limit));
+  }
+
+  purgeUser(userId: string): Promise<void> {
+    this.users.delete(userId);
+    this.accountStatus.delete(userId);
+    for (const [key, device] of [...this.devices]) {
+      if (device.userId === userId) this.devices.delete(key);
+    }
+    for (const [key, recording] of [...this.recordings]) {
+      if (recording.userId === userId) {
+        this.recordings.delete(key);
+        for (const [clientKey, recordingId] of [...this.clientKey]) {
+          if (recordingId === key) this.clientKey.delete(clientKey);
+        }
+        for (const [sessionId, session] of [...this.sessions]) {
+          if (session.recordingId === key) this.sessions.delete(sessionId);
+        }
+      }
+    }
+    for (const [key, person] of [...this.people]) {
+      if (person.userId === userId) this.people.delete(key);
+    }
+    for (const [key, conversation] of [...this.conversations]) {
+      if (conversation.userId === userId) {
+        this.conversations.delete(key);
+        this.speakers.delete(key);
+        this.segments.delete(key);
+        this.entities.delete(key);
+        this.actions.delete(key);
+        this.embeddings.delete(key);
+      }
+    }
+    this.links = this.links.filter((link) => this.conversations.has(link.conversationId));
+    for (const [key, job] of [...this.analysisJobs]) {
+      if (job.userId === userId) this.analysisJobs.delete(key);
+    }
+    for (const [key, session] of [...this.authSessions]) {
+      if (session.userId === userId) this.authSessions.delete(key);
+    }
+    for (const [subject, id] of [...this.authSubjects]) {
+      if (id === userId) this.authSubjects.delete(subject);
+    }
+    return Promise.resolve();
   }
 
   upsertUserByAuthSubject(input: {
@@ -83,6 +157,7 @@ export class MemoryStore implements Store {
     };
     this.users.set(user.id, user);
     this.authSubjects.set(input.authSubject, user.id);
+    this.accountStatus.set(user.id, { status: "active", deletedAt: null });
     return Promise.resolve(clone(user));
   }
 
@@ -468,6 +543,33 @@ export class MemoryStore implements Store {
   updateAnalysisJob(job: AnalysisJob): Promise<AnalysisJob> {
     this.analysisJobs.set(job.id, clone(job));
     return Promise.resolve(clone(job));
+  }
+
+  findRecordingPurgeCandidates(cutoff: Date, limit: number): Promise<Recording[]> {
+    const candidates = [...this.recordings.values()]
+      .filter((recording) => {
+        if (!["analyzed", "analysis_failed", "stored"].includes(recording.status)) return false;
+        if (!recording.clientAckAt || !recording.storageKey || recording.deletedAt) return false;
+        const anchor = recording.analyzedAt ?? recording.clientAckAt;
+        return anchor.getTime() <= cutoff.getTime();
+      })
+      .sort((a, b) => (a.analyzedAt ?? a.clientAckAt!).getTime() - (b.analyzedAt ?? b.clientAckAt!).getTime());
+    return Promise.resolve(candidates.slice(0, limit).map(clone));
+  }
+
+  createAuditEvent(event: AuditEvent): Promise<void> {
+    this.auditEvents.push(clone(event));
+    return Promise.resolve();
+  }
+
+  listAuditEvents(userId: string, limit = 100): Promise<AuditEvent[]> {
+    return Promise.resolve(
+      this.auditEvents
+        .filter((event) => event.userId === userId)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit)
+        .map(clone),
+    );
   }
 
   async claimNextAnalysisJob(now: Date): Promise<AnalysisJob | null> {

@@ -2,7 +2,7 @@
 
 - 최종 실행: 2026-11-14
 - 명령: `npm run check` · `db:migrate` · `db:checks` · `test:db` · `test:s3` · `test:e2e` · `web:build`
-- 결과: **49 tests / pass 49 / fail 0**, DB **17 / 17**, S3 **7 / 7**, E2E **6 / 6**, Swift **13 / 13**,
+- 결과: **53 tests / pass 53 / fail 0**, DB **20 / 20**, S3 **7 / 7**, E2E **6 / 6**, Swift **13 / 13**,
   계약 스키마 11 · 예제 17 · OpenAPI 유효, DB 마이그레이션(2건)·제약 검사 통과
 
 ## 1. 자동 검증 항목
@@ -234,6 +234,20 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
   프레임이 잘려 CRC 오류가 났다.
 - ACK 배칭·창 8 적용 후 160KB 전송이 약 28초 → 14초로 줄었다.
 - iOS 실기기 CoreBluetooth E2E, VAD, microSD 카드, nRF52840 포팅은 아직 `HW-PENDING`.
+
+## 2.12 삭제·내보내기·감사 (W-25, 2026-11-14)
+
+| # | 검증 | 근거 | 결과 |
+| --- | --- | --- | --- |
+| 1 | export 는 본인 데이터만, attachment 헤더, 감사 기록 | `tests/privacy.test.ts` | 통과 |
+| 2 | 계정 삭제: 세션 폐기, 재로그인 401, 30일 유예, 멱등 | 동일 | 통과 |
+| 3 | 30일 경과 원본만 purge, ACK 없는 녹음 제외, 멱등 | 동일 | 통과 |
+| 4 | 30일 경과 삭제 계정 하드 삭제·오브젝트 삭제 | 동일 | 통과 |
+| 5 | 사용자 상태·purge 후보·감사 최신순·purge 후 SET NULL | `tests/db/privacy.test.ts` | 통과 |
+| 6 | audit_events CHECK/FK/SET NULL | `db/checks/0004_audit_events.sql` | 통과 |
+| 7 | purge 스크립트 실행(현재 0건) | `npm run purge` | 통과 |
+
+명세: `docs/adr/0012-export-account-deletion-audit.md`, `GET /api/v1/export`, `DELETE /api/v1/me`.
 
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 

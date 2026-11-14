@@ -44,18 +44,21 @@ gyeol/
 │   ├── migrations/0001_init.sql    # 14개 테이블
 │   ├── migrations/0002_analysis_jobs.sql  # 비동기 분석 작업 큐 (ADR-0007)
 │   ├── migrations/0003_sessions.sql       # Apple 세션 (ADR-0010)
+│   ├── migrations/0004_audit_events.sql   # 감사 로그 (W-25)
 │   ├── checks/*.sql                # 제약 실동작 검증
 │   └── README.md
 ├── deploy/docker-compose.yml       # pgvector·MinIO 로컬 서비스
 ├── scripts/db-migrate.mjs          # 체크섬 기반 마이그레이션 러너
 ├── scripts/db-checks.mjs           # DB 제약 검증 러너
 ├── scripts/test-s3.mjs             # MinIO 스토리지 테스트 러너
+├── scripts/purge.mjs               # 보존 정책 실행 (W-25)
 ├── scripts/db-backup.mjs           # pg_dump 논리 백업
 ├── scripts/db-restore-rehearsal.mjs # 별도 DB 복구·비교
 ├── tests/
 │   ├── integration.test.ts         # 전 구간 시나리오
 │   ├── async-analysis.test.ts      # 작업 큐·재시도·타임아웃·임차 회수
 │   ├── auth.test.ts                # 세션·소유자 스코프
+│   ├── privacy.test.ts             # 내보내기·삭제·purge·감사
 │   ├── ble-protocol.test.ts        # 프레임·재전송·이어받기
 │   ├── ai-provider.test.ts         # provider 계약·실패 경로
 │   ├── e2e/                        # Playwright 검색·상세·모바일
@@ -66,7 +69,7 @@ gyeol/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~13, adr/0001~0011)
+├── docs/ (00~13, adr/0001~0012)
 ├── tools/ (codec 측정, BLE 프로브는 firmware/esp32s3/tools)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```

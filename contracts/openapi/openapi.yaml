@@ -131,6 +131,48 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /api/v1/export:
+    get:
+      operationId: exportUserData
+      tags: [privacy]
+      summary: 사용자 데이터 내보내기
+      description: |
+        사용자 소유의 인물·녹음 메타데이터·대화 상세를 JSON 으로 내보낸다.
+        오디오 바이너리는 포함하지 않는다. `Content-Disposition: attachment` 로 반환한다.
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      responses:
+        "200":
+          description: 내보내기 번들
+          content:
+            application/json:
+              schema:
+                $ref: "../schemas/domain/export-bundle.json"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/me:
+    delete:
+      operationId: requestAccountDeletion
+      tags: [privacy]
+      summary: 계정 삭제 요청
+      description: |
+        즉시 세션을 폐기하고 계정을 `deleted` 로 표시한다. 30일 유예 후
+        원본 음성과 파생 데이터를 하드 삭제한다(ADR-0011, W-25).
+      security:
+        - bearerAuth: []
+        - sessionCookie: []
+      responses:
+        "202":
+          description: 삭제 요청 접수
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /api/v1/devices:
     post:
       operationId: registerDevice
@@ -650,6 +692,14 @@ components:
       properties:
         session:
           $ref: "../schemas/domain/session.json"
+      additionalProperties: false
+
+    AccountDeletionEnvelope:
+      type: object
+      required: [deletion]
+      properties:
+        deletion:
+          $ref: "../schemas/domain/account-deletion.json"
       additionalProperties: false
 
     PageOfDevices:

@@ -30,6 +30,32 @@ export interface User {
   createdAt: Date;
 }
 
+export type UserStatus = "active" | "suspended" | "deleted";
+
+export interface UserAccount {
+  id: string;
+  displayName: string;
+  status: UserStatus;
+  deletedAt: Date | null;
+}
+
+export type AuditAction =
+  | "export"
+  | "account_delete_requested"
+  | "account_purged"
+  | "recording_purged";
+
+export interface AuditEvent {
+  id: string;
+  userId: string | null;
+  action: AuditAction;
+  resourceType: string;
+  resourceId: string | null;
+  traceId: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+}
+
 export interface Device {
   id: string;
   userId: string | null;

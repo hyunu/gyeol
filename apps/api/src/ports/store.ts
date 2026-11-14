@@ -1,6 +1,7 @@
 import type {
   ActionItem,
   AnalysisJob,
+  AuditEvent,
   AnalysisResult,
   Conversation,
   ConversationDetail,
@@ -13,6 +14,7 @@ import type {
   ExtractedEntity,
   UploadSession,
   User,
+  UserAccount,
 } from "../domain/types.ts";
 
 export interface Paged<T> {
@@ -94,8 +96,15 @@ export interface Store {
   readonly kind: "memory" | "postgres";
   /** 선택: 저장소 연결 확인. 구현이 없으면 health 는 구성 정보만 보고한다. */
   ping?(): Promise<void>;
+  /** 정리 스크립트가 커넥션을 닫을 때 쓴다. */
+  close?(): Promise<void>;
 
   ensureUser(id: string): Promise<User>;
+  findUserAccount(id: string): Promise<UserAccount | null>;
+  markUserDeleted(id: string, at: Date): Promise<void>;
+  listUsersPendingPurge(cutoff: Date, limit: number): Promise<UserAccount[]>;
+  /** 사용자와 모든 소유 데이터를 하드 삭제한다. 오브젝트는 호출자가 먼저 지운다. */
+  purgeUser(userId: string): Promise<void>;
   /** Apple sub 로 사용자를 찾거나 만든다(ADR-0010). */
   upsertUserByAuthSubject(input: {
     id: string;
@@ -114,6 +123,8 @@ export interface Store {
   findRecordingByClientKey(deviceId: string, clientRecordingId: string): Promise<Recording | null>;
   updateRecording(recording: Recording): Promise<Recording>;
   listRecordings(filter: RecordingFilter): Promise<Paged<Recording>>;
+  /** 30일 경과 원본 purge 후보(ACK 완료, 아직 purged 아님). */
+  findRecordingPurgeCandidates(cutoff: Date, limit: number): Promise<Recording[]>;
 
   createUploadSession(session: UploadSession): Promise<UploadSession>;
   findUploadSession(id: string): Promise<UploadSession | null>;
@@ -155,6 +166,9 @@ export interface Store {
   touchSession(id: string, at: Date): Promise<void>;
   revokeSession(id: string, at: Date): Promise<void>;
   revokeUserSessions(userId: string, at: Date): Promise<number>;
+
+  createAuditEvent(event: AuditEvent): Promise<void>;
+  listAuditEvents(userId: string, limit?: number): Promise<AuditEvent[]>;
 }
 
 /** AI 파이프라인 포트. Provider Adapter 로 교체한다. */

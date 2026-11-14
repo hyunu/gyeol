@@ -13,6 +13,7 @@ import type {
 import { isDeletable } from "../domain/recording.ts";
 import { isDeviceOnline } from "../domain/device.ts";
 import type { ConversationListItem } from "../ports/store.ts";
+import type { AccountDeletion, ExportBundle } from "../usecases/privacy.ts";
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
 
@@ -61,6 +62,24 @@ export function recordingDto(recording: Recording) {
     purgedAt: iso(recording.purgedAt),
     createdAt: recording.createdAt.toISOString(),
     updatedAt: recording.updatedAt.toISOString(),
+  };
+}
+
+export function exportBundleDto(bundle: ExportBundle) {
+  return {
+    exportedAt: bundle.exportedAt.toISOString(),
+    user: bundle.user,
+    persons: bundle.persons.map(personDto),
+    recordings: bundle.recordings.map(recordingDto),
+    conversations: bundle.conversations.map(conversationDetailDto),
+  };
+}
+
+export function accountDeletionDto(deletion: AccountDeletion) {
+  return {
+    status: deletion.status,
+    requestedAt: deletion.requestedAt.toISOString(),
+    purgeAfter: deletion.purgeAfter.toISOString(),
   };
 }
 

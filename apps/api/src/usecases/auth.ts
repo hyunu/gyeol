@@ -48,6 +48,10 @@ export async function signInWithApple(
     authSubject: identity.subject,
     displayName,
   });
+  const account = await deps.store.findUserAccount(user.id);
+  if (!account || account.status !== "active") {
+    throw unauthorized("사용할 수 없는 계정입니다.");
+  }
 
   const token = randomBytes(32).toString("base64url");
   const session = await deps.store.createSession({

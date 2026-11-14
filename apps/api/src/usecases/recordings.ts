@@ -15,6 +15,7 @@ import {
 } from "../domain/recording.ts";
 import type { Recording, UploadSession } from "../domain/types.ts";
 import type { Deps } from "./deps.ts";
+import { recordRecordingPurge } from "./privacy.ts";
 
 export interface CreateRecordingInput {
   deviceId: string;
@@ -243,7 +244,12 @@ export async function acknowledgeRecording(deps: Deps, userId: string, recording
   return deps.store.updateRecording({ ...recording, clientAckAt: now, updatedAt: now });
 }
 
-export async function deleteRecording(deps: Deps, userId: string, recordingId: string): Promise<void> {
+export async function deleteRecording(
+  deps: Deps,
+  userId: string,
+  recordingId: string,
+  traceId: string | null = null,
+): Promise<void> {
   const recording = await ownedRecording(deps, userId, recordingId);
   const blockers = deletionBlockers(recording);
   if (blockers.length > 0) throw recordingNotDeletable(blockers);
@@ -256,6 +262,7 @@ export async function deleteRecording(deps: Deps, userId: string, recordingId: s
     purgedAt: now,
     updatedAt: now,
   });
+  await recordRecordingPurge(deps, recording, traceId);
 }
 
 export async function getRecording(deps: Deps, userId: string, recordingId: string): Promise<Recording> {

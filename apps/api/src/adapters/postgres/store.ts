@@ -4,6 +4,7 @@ import { uuidv7 } from "../../domain/ids.ts";
 import type {
   ActionItem,
   AnalysisJob,
+  AuditEvent,
   Conversation,
   ConversationDetail,
   Device,
@@ -15,6 +16,7 @@ import type {
   TranscriptSegment,
   UploadSession,
   User,
+  UserAccount,
 } from "../../domain/types.ts";
 import type {
   ConversationFilter,
@@ -801,6 +803,116 @@ export class PostgresStore implements Store {
     }
   }
 
+  async findUserAccount(id: string): Promise<UserAccount | null> {
+    const { rows } = await this.pool.query(
+      `SELECT id, display_name, status, deleted_at FROM users WHERE id = $1`,
+      [id],
+    );
+    return rows[0] ? mapUserAccount(rows[0]) : null;
+  }
+
+  async markUserDeleted(id: string, at: Date): Promise<void> {
+    await this.pool.query(
+      `UPDATE users SET status = 'deleted', deleted_at = COALESCE(deleted_at, $2), updated_at = $2
+       WHERE id = $1`,
+      [id, at],
+    );
+  }
+
+  async listUsersPendingPurge(cutoff: Date, limit: number): Promise<UserAccount[]> {
+    const { rows } = await this.pool.query(
+      `SELECT id, display_name, status, deleted_at FROM users
+       WHERE status = 'deleted' AND deleted_at IS NOT NULL AND deleted_at <= $1
+       ORDER BY deleted_at ASC LIMIT $2`,
+      [cutoff, limit],
+    );
+    return rows.map(mapUserAccount);
+  }
+
+  async purgeUser(userId: string): Promise<void> {
+    await this.tx(async (client) => {
+      await client.query(`DELETE FROM analysis_jobs WHERE user_id = $1`, [userId]);
+      await client.query(
+        `DELETE FROM speaker_embeddings
+         WHERE speaker_cluster_id IN (
+           SELECT sc.id FROM speaker_clusters sc
+           JOIN conversations c ON c.id = sc.conversation_id WHERE c.user_id = $1
+         ) OR person_id IN (SELECT id FROM persons WHERE user_id = $1)`,
+        [userId],
+      );
+      for (const table of [
+        "action_items",
+        "extracted_entities",
+        "transcript_segments",
+        "speaker_clusters",
+        "conversation_embeddings",
+      ]) {
+        await client.query(
+          `DELETE FROM ${table} WHERE conversation_id IN
+           (SELECT id FROM conversations WHERE user_id = $1)`,
+          [userId],
+        );
+      }
+      await client.query(
+        `DELETE FROM recording_conversations
+         WHERE conversation_id IN (SELECT id FROM conversations WHERE user_id = $1)
+            OR recording_id IN (SELECT id FROM recordings WHERE user_id = $1)`,
+        [userId],
+      );
+      await client.query(`DELETE FROM conversations WHERE user_id = $1`, [userId]);
+      await client.query(
+        `DELETE FROM upload_sessions WHERE recording_id IN
+         (SELECT id FROM recordings WHERE user_id = $1)`,
+        [userId],
+      );
+      await client.query(`DELETE FROM sessions WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM recordings WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM persons WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM devices WHERE user_id = $1`, [userId]);
+      await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+    });
+  }
+
+  async findRecordingPurgeCandidates(cutoff: Date, limit: number): Promise<Recording[]> {
+    const { rows } = await this.pool.query(
+      `SELECT * FROM recordings
+       WHERE status IN ('analyzed', 'analysis_failed', 'stored')
+         AND client_ack_at IS NOT NULL
+         AND storage_key IS NOT NULL
+         AND deleted_at IS NULL
+         AND COALESCE(analyzed_at, client_ack_at) <= $1
+       ORDER BY COALESCE(analyzed_at, client_ack_at) ASC
+       LIMIT $2`,
+      [cutoff, limit],
+    );
+    return rows.map(mapRecording);
+  }
+
+  async createAuditEvent(event: AuditEvent): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO audit_events (id, user_id, action, resource_type, resource_id, trace_id, metadata, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        event.id,
+        event.userId,
+        event.action,
+        event.resourceType,
+        event.resourceId,
+        event.traceId,
+        event.metadata,
+        event.createdAt,
+      ],
+    );
+  }
+
+  async listAuditEvents(userId: string, limit = 100): Promise<AuditEvent[]> {
+    const { rows } = await this.pool.query(
+      `SELECT * FROM audit_events WHERE user_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2`,
+      [userId, limit],
+    );
+    return rows.map(mapAuditEvent);
+  }
+
   async findAnalysisJob(id: string): Promise<AnalysisJob | null> {
     const { rows } = await this.pool.query(`SELECT * FROM analysis_jobs WHERE id = $1`, [id]);
     return rows[0] ? mapAnalysisJob(rows[0]) : null;
@@ -938,6 +1050,28 @@ const num = (value: unknown): number | null => (value === null || value === unde
 
 function mapUser(row: Row): User {
   return { id: row.id, displayName: row.display_name, createdAt: row.created_at };
+}
+
+function mapUserAccount(row: Row): UserAccount {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    status: row.status,
+    deletedAt: row.deleted_at ?? null,
+  };
+}
+
+function mapAuditEvent(row: Row): AuditEvent {
+  return {
+    id: row.id,
+    userId: row.user_id ?? null,
+    action: row.action,
+    resourceType: row.resource_type,
+    resourceId: row.resource_id ?? null,
+    traceId: row.trace_id ?? null,
+    metadata: row.metadata ?? {},
+    createdAt: row.created_at,
+  };
 }
 
 function mapDevice(row: Row): Device {

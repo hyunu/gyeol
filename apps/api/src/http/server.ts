@@ -12,6 +12,7 @@ import * as recordingUseCases from "../usecases/recordings.ts";
 import * as conversationUseCases from "../usecases/conversations.ts";
 import * as analysisUseCases from "../usecases/analysis.ts";
 import * as authUseCases from "../usecases/auth.ts";
+import * as privacyUseCases from "../usecases/privacy.ts";
 import { createIdentityVerifierFromEnv } from "../adapters/identity/apple.ts";
 import { methodNotAllowed, notFound, validationFailed } from "../domain/errors.ts";
 import type { ActionItemStatus } from "../domain/types.ts";
@@ -50,7 +51,7 @@ interface Route {
   method: string;
   segments: string[];
   auth: boolean;
-  handle(ctx: Ctx): Promise<{ status: number; body?: unknown }>;
+  handle(ctx: Ctx): Promise<{ status: number; body?: unknown; headers?: Record<string, string> }>;
 }
 
 export interface AppOptions {
@@ -219,6 +220,22 @@ export function createApp(options: AppOptions = {}): http.Server {
     return { status: 204 };
   });
 
+  route("DELETE", "/api/v1/me", true, async ({ userId, traceId, deps }) => {
+    const deletion = await privacyUseCases.requestAccountDeletion(deps, userId, traceId);
+    return { status: 202, body: { deletion: dto.accountDeletionDto(deletion) } };
+  });
+
+  route("GET", "/api/v1/export", true, async ({ userId, traceId, deps }) => {
+    const bundle = await privacyUseCases.exportUserData(deps, userId, traceId);
+    return {
+      status: 200,
+      body: dto.exportBundleDto(bundle),
+      headers: {
+        "content-disposition": `attachment; filename="gyeol-export-${traceId}.json"`,
+      },
+    };
+  });
+
   // ---------------------------------------------------------------- devices
   route("POST", "/api/v1/devices", true, async ({ req, userId, deps }) => {
     const body = requireObject(await readJsonBody(req));
@@ -322,8 +339,8 @@ export function createApp(options: AppOptions = {}): http.Server {
     return { status: 200, body: { recording: dto.recordingDto(recording) } };
   });
 
-  route("DELETE", "/api/v1/recordings/:recordingId", true, async ({ params, userId, deps }) => {
-    await recordingUseCases.deleteRecording(deps, userId, params.recordingId);
+  route("DELETE", "/api/v1/recordings/:recordingId", true, async ({ params, userId, traceId, deps }) => {
+    await recordingUseCases.deleteRecording(deps, userId, params.recordingId, traceId);
     return { status: 204 };
   });
 
@@ -524,7 +541,7 @@ export function createApp(options: AppOptions = {}): http.Server {
       if (result.status === 204) sendEmpty(res, 204, traceId);
       else if (typeof result.body === "string") {
         sendText(res, result.status, result.body, "text/plain; version=0.0.4; charset=utf-8", traceId);
-      } else sendJson(res, result.status, result.body ?? {}, traceId);
+      } else sendJson(res, result.status, result.body ?? {}, traceId, result.headers ?? {});
     } catch (err) {
       requestErrors.set(res, err);
       sendProblem(res, err, traceId, url.pathname);

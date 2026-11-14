@@ -33,6 +33,7 @@
 ```mermaid
 erDiagram
     users ||--o{ sessions : "auth (ADR-0010)"
+    users ||--o{ audit_events : "audit (W-25)"
     users ||--o{ devices : "owns"
     users ||--o{ recordings : "owns"
     users ||--o{ persons : "owns"
@@ -340,7 +341,23 @@ erDiagram
 - 선점은 `FOR UPDATE SKIP LOCKED` 로 원자적이다. 만료 임차는 회수한다.
 - `POST .../analyze` 는 작업을 만들기만 하고, 실행은 워커가 한다(ADR-0007).
 
-### 3.16 `sessions` (ADR-0010)
+### 3.16 `audit_events` (W-25)
+
+| 필드 | 타입 | NULL | 제약/기본 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | uuid | N | PK | |
+| `user_id` | uuid | Y | FK users SET NULL | 사용자 삭제 후에도 이력 유지 |
+| `action` | text | N | CHECK 4종 | `export`/`account_delete_requested`/`account_purged`/`recording_purged` |
+| `resource_type` | text | N | 1..60 | `user`, `recording` 등 |
+| `resource_id` | text | Y | | 대상 id |
+| `trace_id` | text | Y | | 요청 추적 |
+| `metadata` | jsonb | N | `{}` | 건수·정책 등 최소 정보 |
+| `created_at` | timestamptz | N | `now()` | |
+
+- 본문·파일 경로 같은 민감 내용은 metadata 에 넣지 않는다.
+- 인덱스: `(user_id, created_at DESC)`, `(action, created_at DESC)`.
+
+### 3.17 `sessions` (ADR-0010)
 
 | 필드 | 타입 | NULL | 제약/기본 | 설명 |
 | --- | --- | --- | --- | --- |
@@ -364,6 +381,7 @@ erDiagram
 | --- | --- | --- |
 | users → devices | 1:N | SET NULL (기기는 이력 보존) |
 | users → sessions | 1:N | CASCADE (세션은 계정과 함께 폐기) |
+| users → audit_events | 1:N | SET NULL (감사 이력 보존) |
 | users → recordings | 1:N | RESTRICT (계정 삭제는 purge 절차 후) |
 | users → persons | 1:N | CASCADE |
 | devices → recordings | 1:N | RESTRICT |
@@ -597,7 +615,7 @@ erDiagram
 | D-12 | 화자 제안 임계값 | `suggested` 가드 | **실험값** 0.80 / margin 0.05 — `speaker_id_thresholds` 로 모델별 설정 |
 | D-13 | DB 암호화 범위 | 개인정보 | **확정: 저장 암호화(at-rest)+TLS만, 앱 필드 암호화는 PII 추가 시 재검토** — `docs/adr/0011-retention-30-days.md` |
 | D-14 | 주변인 녹음 동의 | 법적 요구 | TBD |
-| D-15 | 감사 로그 | 규제 대응 | Phase 2 |
+| D-15 | 감사 로그 | 규제 대응 | **최소 세트 확정**: export·account_delete_requested·account_purged·recording_purged (ADR-0012) |
 
 ---
 
@@ -626,4 +644,5 @@ erDiagram
 | --- | --- | --- |
 | 1.0 | 2026-11-13 | 최초 설계안 |
 | 1.1 | 2026-11-13 | 승인 반영: M-01(연결 테이블), M-02(코덱 유연화), M-03(모델별 임계값), M-04(삭제 5조건) |
-| 1.2 | 2026-11-14 | `analysis_jobs`(§3.15, §6.8, ADR-0007), `sessions`(§3.16, ADR-0010), D-01·D-04·D-05·D-08·D-11 확정(ADR-0006·0009·0010·0011) |
+| 1.2 | 2026-11-14 | `analysis_jobs`(§3.15, §6.8, ADR-0007), `sessions`(§3.17, ADR-0010), D-01·D-04·D-05·D-08·D-11 확정(ADR-0006·0009·0010·0011) |
+| 1.3 | 2026-11-14 | `audit_events`(§3.16, ADR-0012), D-15 최소 세트 확정 |

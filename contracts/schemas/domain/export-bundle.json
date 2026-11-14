@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/export-bundle.json",
+  "title": "ExportBundle",
+  "description": "사용자 데이터 내보내기(W-25). 오디오 바이너리는 포함하지 않는다.",
+  "type": "object",
+  "required": ["exportedAt", "user", "persons", "recordings", "conversations"],
+  "properties": {
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "user": {
+      "type": "object",
+      "required": ["id", "displayName"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 80 }
+      },
+      "additionalProperties": false
+    },
+    "persons": {
+      "type": "array",
+      "items": { "$ref": "person.json" }
+    },
+    "recordings": {
+      "type": "array",
+      "items": { "$ref": "recording.json" }
+    },
+    "conversations": {
+      "type": "array",
+      "items": { "$ref": "conversation-detail.json" }
+    }
+  },
+  "additionalProperties": false
+}

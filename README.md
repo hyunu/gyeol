@@ -18,7 +18,7 @@
 | 비동기 분석 작업 큐 | 완료 (ADR-0007, 재시도·타임아웃·임차 회수) |
 | 웹 대시보드 (React) | 완료 — 타임라인·상세·인물 필터·키워드 검색 (`apps/web`) |
 | Fake Hardware / Fake Mobile | 완료 |
-| 통합·계약 테스트 | 완료 — 49 tests · E2E 6 tests |
+| 통합·계약 테스트 | 완료 — 53 tests · E2E 6 tests |
 | PostgreSQL 마이그레이션·제약 검증 | 완료 (15 테이블, `npm run db:checks`) |
 | PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
 | 오브젝트 스토리지 | 완료 — 로컬 디스크 + S3/MinIO (`GYEOL_STORAGE`), `test:s3` 7 tests |
@@ -27,6 +27,7 @@
 | BLE 프로토콜 | 완료 — GATT 프레임·ACK·재전송·이어받기 계약 + 시뮬레이터 (`docs/12-ble-protocol.md`) |
 | AI provider 계약 | 완료(계약) — HTTP 파이프라인·mock 계약 테스트 (`docs/13-ai-provider-contract.md`). 실제 vendor는 ENV-05 |
 | ESP32-S3 펌웨어 | 개발 변형 — PDM 녹음·BLE 전송·중단 재개 SHA 일치 (`firmware/esp32s3`) |
+| 삭제·내보내기·감사 | 완료 — `GET /export`, `DELETE /me`(30일 유예), `audit_events`, `npm run purge` |
 | 백업/복구 | 완료 — `db:backup`·복구 리허설 통과 (`docs/11-backup-restore.md`) |
 | 실물 웨어러블 | **HW-PENDING** — ESP32-S3 개발 보드로 PDM·BLE 전송·재개 검증 |
 | iOS 앱 | **PARTIAL** — 시뮬레이터 빌드·수신기 13 tests, 실기기 E2E 대기 |
@@ -36,7 +37,7 @@
 
 ```bash
 npm install
-npm run check      # 계약 + 타입 + 테스트 (49 tests)
+npm run check      # 계약 + 타입 + 테스트 (53 tests)
 npm start          # http://127.0.0.1:8080 (메모리 저장소)
 ```
 
@@ -142,10 +143,19 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 - 오브젝트 스토리지는 **로컬 디스크**가 기본이고 `GYEOL_STORAGE=s3` 로 S3/MinIO 를 쓴다.
   S3 경유 업로드는 커밋 시 전송량이 2배다(ADR-0008).
 
+내보내기·계정 삭제·보존 purge:
+
+```bash
+curl -s -H 'x-user-id: ...' localhost:8080/api/v1/export -o export.json
+curl -s -X DELETE -H 'x-user-id: ...' localhost:8080/api/v1/me | jq
+
+GYEOL_STORE=postgres DATABASE_URL=... npm run purge   # 30일 경과 원본·계정 정리
+```
+
 ## 다음 단계
 
 작업 순서와 완료 조건은 [`docs/08-work-order.md`](docs/08-work-order.md) 를 따른다.
 
-1. Apple 로그인·세션 구현 (W-19, Apple 개발자 설정 필요)
-2. 삭제·내보내기 API (W-25, D-13 암호화 범위 결정 후) · 실제 AI provider (W-18)
-3. 실물 웨어러블 + iOS BLE 연동 (W-20~W-24, `HW-PENDING`)
+1. iOS 실기기 E2E (W-24) · VAD/microSD (W-21)
+2. 실제 AI provider 연결 (ENV-05) · 부하/지연 측정 (W-28)
+3. nRF52840 포팅·배포 인증서 (HW-PENDING)

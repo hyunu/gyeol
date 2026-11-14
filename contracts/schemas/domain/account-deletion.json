@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gyeol.local/schemas/domain/account-deletion.json",
+  "title": "AccountDeletion",
+  "description": "계정 삭제 요청 결과(W-25). 즉시 세션이 폐기되고 30일 뒤 하드 삭제된다.",
+  "type": "object",
+  "required": ["status", "requestedAt", "purgeAfter"],
+  "properties": {
+    "status": { "type": "string", "const": "pending_purge" },
+    "requestedAt": { "type": "string", "format": "date-time" },
+    "purgeAfter": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
