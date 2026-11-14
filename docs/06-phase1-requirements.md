@@ -9,7 +9,7 @@
 | ID | 요구사항 | 검증 방법 | 상태 |
 | --- | --- | --- | --- |
 | R-020 | 웨어러블은 상시 샘플링하고 VAD 로 음성 구간을 판별해 전후 버퍼를 포함해 녹음한다. | Fake 는 WAV 생성만 대체. 실제 VAD 는 펌웨어 검증 필요 | `HW-PENDING` |
-| R-021 | 스마트폰이 없어도 microSD 에 독립 저장을 계속한다. | Fake + ESP32-S3 LittleFS 저장·재부팅 유지 확인. microSD 카드·nRF는 미검증 | `HW-PENDING` (개발 보드 검증) |
+| R-021 | 스마트폰이 없어도 microSD 에 독립 저장을 계속한다. | Fake + ESP32-S3 LittleFS 저장·재부팅 유지. Exp Board 결합·microSD 삽입 후 재검증 필요 | `HW-PENDING` (개발 보드 검증) |
 | R-022 | BLE 전송은 ACK·재전송·이어받기를 지원한다. | 프로토콜 9건 + ESP32-S3 실기기 160KB SHA 일치·중단 재개 | `HW-PENDING` (개발 보드 검증) |
 | R-023 | 폰은 STT·화자분리·화자식별·대화구성·요약·정보추출·검색데이터 생성 파이프라인을 실행한다. | Fake + 비동기 작업 큐 + HTTP provider 계약(mock 6건). 실제 vendor 는 ENV-05 | `WIP` |
 | R-024 | 결과는 서버에 저장되고 웹에서 날짜별·인물별·요약·검색이 가능하다. | 웹 대시보드(`apps/web`) + Playwright E2E 6건 (날짜·인물·키워드·딥링크·모바일) | `DONE` |

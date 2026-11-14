@@ -8,6 +8,7 @@
 
 | 항목 | 값 |
 | --- | --- |
+| 보드 | **XIAO ESP32S3 + XIAO ESP32S3 Exp. Board v1.1** (Sense 키트) |
 | 칩 | ESP32-S3 QFN56 rev v0.2, 8MB PSRAM |
 | USB | USB-Serial/JTAG (`303A:1001`), `/dev/cu.usbmodem1101` |
 | PDM 마이크 | CLK GPIO42, DATA GPIO41 |
@@ -56,14 +57,14 @@ PY
 - 부팅 시 파일이 없으면 VAD 녹음을 시도하고, 음성이 없으면 테스트 톤을 만든다.
 - 시리얼에서 `r` 을 보내면 수동으로 VAD 녹음을 시작한다(BLE 미연결 상태).
 
-> 연결된 보드는 SD 마운트가 실패하고 PDM 입력이 사실상 무음(에너지 ~1400)이었다.
-> **XIAO ESP32S3 Sense 가 아닌 일반 ESP32-S3 변형일 가능성**이 높다. VAD 코드는 구현됐지만
-> 실제 마이크 입력으로 검증하지 못했다.
+> 테스트 시 **Exp. Board 가 분리된 상태**였거나 microSD 카드가 없어 SD 마운트가 실패하고
+> PDM 입력이 무음(에너지 ~1400)이었다. 핀은 Seeed 문서와 일치한다(PDM 42/41, SD CS 21).
+> 확장 보드를 완전히 결합하고 FAT32 microSD 를 넣은 뒤 재검증해야 한다.
 
 ## 현재 한계
 
-- **PDM/VAD 실입력 미검증**: 위 보드 변형 문제로 마이크 입력을 확인하지 못했다.
-- **microSD 미검증**: 카드/슬롯 문제로 LittleFS 로 대체했다.
+- **PDM/VAD 실입력 미검증**: Exp. Board 결합 상태에서 마이크 입력을 다시 확인해야 한다.
+- **microSD 미검증**: 카드 미삽입/확장 보드 분리로 LittleFS 로 대체했다.
 - **nRF52840 아님**: 스펙 대상 보드가 아니므로 `HW-PENDING` 은 유지한다.
 - **microSD 미검증**: 카드가 없어 LittleFS 로 대체했다. SD 핀·전원·내구성은 실카드로 확인해야 한다.
 - **전원 차단 복구**: 리셋(재플래시) 후 동일 파일에서 이어받기를 확인했다. 실제 전원 차단은 별도 측정.
@@ -71,7 +72,7 @@ PY
 
 ## 다음
 
-1. Sense 변형(또는 nRF52840 Sense)에서 PDM·microSD 재검증.
+1. Exp. Board 결합 + FAT32 microSD 삽입 후 PDM·microSD 재검증.
 2. 전원 차단 리허설, VAD 임계값 실측 튜닝, 파일 분할.
 3. nRF52840 Sense 포팅(PDM/TWI·BLE 스택 차이).
 4. iOS 실기기에서 CoreBluetooth 전송 E2E.
