@@ -701,6 +701,8 @@ void sdProbe() {
   pinMode(PIN_SD_MISO, INPUT_PULLUP);
   delay(10);
   Serial.printf("[sd] MISO pull-up read=%d (1=정상, 0=GND 단락/접촉)\n", digitalRead(PIN_SD_MISO));
+  // pinMode 로 MISO 를 GPIO 로 바꿨으므로 SPI 주변장치로 다시 연결한다.
+  SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
   sdProbePin(PIN_SD_CS, "CS21");
   sdProbePin(3, "CS3");
 }
