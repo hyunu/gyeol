@@ -234,6 +234,7 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 | 5 | Swift 프레임·수신기·스트림 재조립 13 tests | `apps/ios/Packages/GyeolBLE` | 통과 |
 | 6 | iOS 앱 시뮬레이터 빌드(서명 없이) | `xcodebuild ... iphonesimulator` | 통과 |
 | 7 | iOS device(arm64) 무서명 컴파일 + 서버 주소 설정 UI | `xcodebuild ... iphoneos` | 통과 |
+| 8 | iOS 시뮬레이터 실행·로그인 화면 렌더 | `simctl launch` + screenshot | 통과 |
 
 - MTU 247 에서 알림이 244바이트로 잘리므로 **청크 220** 으로 조정했다. 이전 240 은
   프레임이 잘려 CRC 오류가 났다.

@@ -59,6 +59,11 @@ swift test --package-path apps/ios/Packages/GyeolBLE
   이어받는다.
 - ACK 는 8프레임마다 1회만 보내 왕복을 줄인다.
 
+## 확인된 것
+
+- 시뮬레이터에서 앱 실행·로그인 화면 렌더 확인(2026-11-14).
+- arm64 device 무서명 컴파일 확인.
+
 ## 현재 한계
 
 - 실기기에서 CoreBluetooth 전송 E2E 를 아직 실행하지 않았다(컴파일·시뮬레이터·device 빌드만 확인).
