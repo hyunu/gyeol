@@ -86,6 +86,8 @@ struct MainView: View {
                 .tabItem { Label("기록", systemImage: "book") }
             DeviceView(ble: ble)
                 .tabItem { Label("기기", systemImage: "dot.radiowaves.left.and.right") }
+            SettingsView()
+                .tabItem { Label("설정", systemImage: "gearshape") }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             HStack {
@@ -317,6 +319,39 @@ struct DeviceView: View {
         case .unauthorized: return "권한 없음"
         case .unsupported: return "지원 안 함"
         default: return "확인 중"
+        }
+    }
+}
+
+
+struct SettingsView: View {
+    @AppStorage("apiBaseURL") private var baseURL = "http://127.0.0.1:8080"
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("서버") {
+                    TextField("http://192.168.0.10:8080", text: $baseURL)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Text("실기기에서는 Mac의 LAN 주소를 입력하세요. 예: http://192.168.0.10:8080")
+                        .font(.caption)
+                        .foregroundStyle(GyeolTheme.ink3)
+                }
+
+                Section("안내") {
+                    Text("현재 API: \(baseURL)")
+                        .font(.caption)
+                        .foregroundStyle(GyeolTheme.ink2)
+                    Text("Sign in with Apple 은 App ID 와 entitlement 가 필요합니다. In-House 배포는 Distribution 인증서가 필요합니다.")
+                        .font(.caption)
+                        .foregroundStyle(GyeolTheme.ink3)
+                }
+            }
+            .navigationTitle("설정")
+            .scrollContentBackground(.hidden)
+            .background(GyeolTheme.base)
         }
     }
 }

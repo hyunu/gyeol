@@ -47,6 +47,16 @@ bench: ## API 성능 기준선 (GYEOL_STORE=postgres, DATABASE_URL 필요)
 acceptance: ## 릴리스 수용 테스트 (DB·S3·E2E·Swift·펌웨어)
 	npm run --silent acceptance -- --with-ios
 
+ios-build: ## iOS 시뮬레이터 빌드
+	cd apps/ios && xcodegen generate && xcodebuild -project Gyeol.xcodeproj -scheme Gyeol \
+		-sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+		-derivedDataPath /tmp/gyeol-ios-build CODE_SIGNING_ALLOWED=NO build
+
+ios-device-build: ## iOS device(arm64) 무서명 빌드
+	cd apps/ios && xcodegen generate && xcodebuild -project Gyeol.xcodeproj -scheme Gyeol \
+		-sdk iphoneos -destination 'generic/platform=iOS' \
+		-derivedDataPath /tmp/gyeol-ios-device CODE_SIGNING_ALLOWED=NO build
+
 db-backup: ## 논리 백업 (BACKUP=경로, 기본 .artifacts/backups)
 	npm run --silent db:backup -- $${BACKUP:-}
 

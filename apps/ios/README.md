@@ -27,7 +27,15 @@ xcodebuild -project Gyeol.xcodeproj -scheme Gyeol \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-서명 포함 실기기 빌드는 Xcode 에서 Team 을 확인하고 실행한다. In-House 배포는
+실기기(무서명) 컴파일:
+
+```bash
+xcodebuild -project Gyeol.xcodeproj -scheme Gyeol -sdk iphoneos \
+  -destination 'generic/platform=iOS' \
+  -derivedDataPath /tmp/gyeol-ios-device CODE_SIGNING_ALLOWED=NO build
+```
+
+서명 포함 실기기 실행은 iPhone 을 연결하고 Xcode 에서 Team 을 확인한다. In-House 배포는
 **Apple Distribution 인증서**가 추가로 필요하다(현재 로컬에 없음).
 
 Swift 패키지 테스트(macOS):
@@ -53,6 +61,8 @@ swift test --package-path apps/ios/Packages/GyeolBLE
 
 ## 현재 한계
 
-- 실기기에서 CoreBluetooth 전송 E2E 를 아직 실행하지 않았다(컴파일·시뮬레이터 빌드만 확인).
+- 실기기에서 CoreBluetooth 전송 E2E 를 아직 실행하지 않았다(컴파일·시뮬레이터·device 빌드만 확인).
+- 실기기에서는 설정 탭에서 Mac 의 LAN 주소(예: `http://192.168.0.10:8080`)를 입력해야 한다.
+- Sign in with Apple 은 App ID/Service ID 와 entitlement 가 필요하다.
 - 웹 로그인(Service ID + client secret)은 별도 작업.
 - 푸시·백그라운드 전송·오디오 재생은 범위 밖.

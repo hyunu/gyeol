@@ -32,7 +32,7 @@
 | 릴리스 | **NO-GO** — 로컬 수용 8/8, 실물·실 provider·배포 인증서 차단 (`docs/15-release-checklist.md`) |
 | 백업/복구 | 완료 — `db:backup`·복구 리허설 통과 (`docs/11-backup-restore.md`) |
 | 실물 웨어러블 | **HW-PENDING** — ESP32-S3 개발 보드로 PDM·BLE 전송·재개 검증 |
-| iOS 앱 | **PARTIAL** — 시뮬레이터 빌드·수신기 13 tests, 실기기 E2E 대기 |
+| iOS 앱 | **PARTIAL** — 시뮬레이터/device 빌드·수신기 13 tests, 실기기 E2E 대기 |
 | 실제 AI provider | **ENV-05** — HTTP 계약·mock 테스트 완료 |
 
 ## 빠른 시작

@@ -83,19 +83,22 @@ enum ApiError: LocalizedError {
 }
 
 struct ApiClient {
-    let baseURL: URL
-
-    init(baseURL: URL? = nil) {
-        if let baseURL {
-            self.baseURL = baseURL
-        } else if
+    /// 설정 화면에서 저장한 주소 → Info.plist → localhost 순으로 사용한다.
+    var baseURL: URL {
+        if
+            let saved = UserDefaults.standard.string(forKey: "apiBaseURL"),
+            !saved.isEmpty,
+            let url = URL(string: saved)
+        {
+            return url
+        }
+        if
             let value = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String,
             let url = URL(string: value)
         {
-            self.baseURL = url
-        } else {
-            self.baseURL = URL(string: "http://127.0.0.1:8080")!
+            return url
         }
+        return URL(string: "http://127.0.0.1:8080")!
     }
 
     func signIn(identityToken: String, nonce: String, displayName: String?) async throws -> AuthSession {
