@@ -52,6 +52,7 @@ gyeol/
 ├── scripts/db-checks.mjs           # DB 제약 검증 러너
 ├── scripts/test-s3.mjs             # MinIO 스토리지 테스트 러너
 ├── scripts/purge.mjs               # 보존 정책 실행 (W-25)
+├── scripts/bench.mjs               # API 성능 기준선 (W-28)
 ├── scripts/db-backup.mjs           # pg_dump 논리 백업
 ├── scripts/db-restore-rehearsal.mjs # 별도 DB 복구·비교
 ├── tests/
@@ -69,7 +70,7 @@ gyeol/
 │   ├── validate-contracts.mjs
 │   ├── contract-test.mjs
 │   └── test/
-├── docs/ (00~13, adr/0001~0012)
+├── docs/ (00~14, adr/0001~0012)
 ├── tools/ (codec 측정, BLE 프로브는 firmware/esp32s3/tools)
 └── Makefile, package.json, tsconfig.json, .github/workflows/ci.yml
 ```

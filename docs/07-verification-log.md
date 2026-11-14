@@ -252,6 +252,19 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 
 명세: `docs/adr/0012-export-account-deletion-audit.md`, `GET /api/v1/export`, `DELETE /api/v1/me`.
 
+## 2.13 성능 기준선 (W-28, 2026-11-14)
+
+| 시나리오 | RPS | p50 | p95 | 오류 | 근거 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 대화 목록 | 1,873 | 10.0ms | 14.9ms | 0 | `npm run bench` |
+| 대화 상세 | 1,633 | 11.7ms | 16.8ms | 0 | 동일 |
+| 키워드 검색 | 1,414 | 13.5ms | 19.7ms | 0 | 동일 |
+| 기기 목록 | 5,198 | 3.6ms | 5.5ms | 0 | 동일 |
+
+- 환경: PostgreSQL 17, 대화 120건, 동시성 20, 3초×4 시나리오, Fake AI.
+- 실제 provider·10,000건 규모·TLS/프록시·다중 인스턴스는 아직 측정하지 않았다.
+- 상세: `docs/14-performance-baseline.md`.
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |

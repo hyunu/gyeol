@@ -41,6 +41,9 @@ db-checks: ## DB 제약·인덱스 실동작 검증 (DATABASE_URL 필요)
 purge: ## 30일 지난 원본·삭제 계정 정리 (GYEOL_STORE=postgres)
 	npm run --silent purge
 
+bench: ## API 성능 기준선 (GYEOL_STORE=postgres, DATABASE_URL 필요)
+	npm run --silent bench
+
 db-backup: ## 논리 백업 (BACKUP=경로, 기본 .artifacts/backups)
 	npm run --silent db:backup -- $${BACKUP:-}
 

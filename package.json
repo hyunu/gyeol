@@ -16,6 +16,7 @@
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:checks": "node scripts/db-checks.mjs",
     "purge": "node scripts/purge.mjs",
+    "bench": "node scripts/bench.mjs",
     "db:backup": "node scripts/db-backup.mjs",
     "db:restore:rehearsal": "node scripts/db-restore-rehearsal.mjs",
     "codec:measure": "node tools/measure-codecs.mjs",

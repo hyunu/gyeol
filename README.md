@@ -28,6 +28,7 @@
 | AI provider 계약 | 완료(계약) — HTTP 파이프라인·mock 계약 테스트 (`docs/13-ai-provider-contract.md`). 실제 vendor는 ENV-05 |
 | ESP32-S3 펌웨어 | 개발 변형 — PDM 녹음·BLE 전송·중단 재개 SHA 일치 (`firmware/esp32s3`) |
 | 삭제·내보내기·감사 | 완료 — `GET /export`, `DELETE /me`(30일 유예), `audit_events`, `npm run purge` |
+| 성능 기준선 | 1차 측정 — p95 15~20ms(120건·동시성 20, Fake AI). 실제 provider·10k 대기 |
 | 백업/복구 | 완료 — `db:backup`·복구 리허설 통과 (`docs/11-backup-restore.md`) |
 | 실물 웨어러블 | **HW-PENDING** — ESP32-S3 개발 보드로 PDM·BLE 전송·재개 검증 |
 | iOS 앱 | **PARTIAL** — 시뮬레이터 빌드·수신기 13 tests, 실기기 E2E 대기 |
