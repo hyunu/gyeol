@@ -229,6 +229,8 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 | 4 | 50,160 bytes 에서 중단 → 재접속 후 재개, 최종 SHA 일치 | 동일 | 통과 |
 | 4b | 기기 재부팅(재플래시) 후 같은 파일에서 재개, 최종 SHA 일치 | 동일 | 통과 |
 | 5 | VAD(white noise) 트리거 → 208,000 bytes 저장 → BLE SHA 일치 | `ble_probe.py` | 통과 |
+| 6 | SD 없이 LittleFS 회전: 전송 완료 파일 삭제 후 재녹음 | 시리얼 로그 | 통과 |
+| 7 | microSD(2GB FAT16, Mac 포맷) 마운트 | CMD0=0xFF | **실패** — 슬롯/접촉/전원 문제 |
 | 5 | Swift 프레임·수신기·스트림 재조립 13 tests | `apps/ios/Packages/GyeolBLE` | 통과 |
 | 6 | iOS 앱 시뮬레이터 빌드(서명 없이) | `xcodebuild ... CODE_SIGNING_ALLOWED=NO` | 통과 |
 

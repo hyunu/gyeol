@@ -5,6 +5,9 @@
 // 프로토콜·파일 형식은 MCU 독립적이므로 nRF52840 포팅 시에도 그대로 쓴다.
 
 #include <Arduino.h>
+#include <algorithm>
+#include <ctime>
+#include <sys/stat.h>
 #include <ArduinoJson.h>
 #include <BLE2902.h>
 #include <BLEDevice.h>
@@ -45,6 +48,9 @@ uint32_t txSeq = 0;
 
 fs::FS *storage = nullptr;
 size_t storageFreeBytes();
+bool ensureSpace(size_t needed);
+bool fileExists(const String &path);
+void markFileSent(const String &path);
 
 struct CurrentFile {
   bool valid = false;
@@ -213,11 +219,16 @@ bool recordVadClip(const String &path, int maxSeconds) {
   constexpr int FRAME_BYTES = FRAME_SAMPLES * 2;
   constexpr int PREROLL_FRAMES = 25;
   constexpr int SILENCE_MS = 2000;
-  constexpr size_t MIN_BYTES = 32000;   // 1초
-  constexpr size_t MAX_BYTES = 600000;  // LittleFS 보호
+  constexpr size_t MIN_BYTES = 32000;  // 1초
+  const size_t freeAtStart = storageFreeBytes();
+  const size_t maxBytes = freeAtStart > 50000 ? min(static_cast<size_t>(600000), freeAtStart - 50000) : 0;
+  if (maxBytes < MIN_BYTES) {
+    Serial.println("[vad] 저장 공간 부족(max)");
+    return false;
+  }
 
   if (!initPdm()) return false;
-  if (storageFreeBytes() < 700000) {
+  if (!ensureSpace(250000)) {
     Serial.println("[vad] 저장 공간 부족");
     stopPdm();
     return false;
@@ -246,7 +257,7 @@ bool recordVadClip(const String &path, int maxSeconds) {
   const int noiseSamples = min(calibrated, 10);
   for (int i = 0; i < noiseSamples; ++i) noisePeak = min(noisePeak, peaks[(calibrated - 1 - i) % PREROLL_FRAMES]);
   if (noiseSamples == 0) noisePeak = 0;
-  const double threshold = max(80.0, noisePeak * 3.0);
+  const double threshold = max(100.0, noisePeak * 1.3);
   Serial.printf("[vad] noisePeak=%.0f threshold=%.0f\n", noisePeak, threshold);
 
   std::vector<std::vector<int16_t>> preroll;
@@ -295,7 +306,7 @@ bool recordVadClip(const String &path, int maxSeconds) {
         Serial.println("[vad] silence stop");
         break;
       }
-      if (written >= MAX_BYTES) {
+      if (written >= maxBytes) {
         Serial.println("[vad] max size");
         break;
       }
@@ -534,6 +545,7 @@ void handleFrame(const gyeol::Frame &frame) {
       const char *status = doc["status"] | "?";
       transferActive = false;
       Serial.printf("[ble] complete_res status=%s\n", status);
+      if (strcmp(status, "ok") == 0 && currentFile.valid) markFileSent(currentFile.path);
       break;
     }
 
@@ -707,6 +719,82 @@ void sdProbe() {
   sdProbePin(3, "CS3");
 }
 
+
+bool fileExists(const String &path) {
+  if (storage == &LittleFS) return LittleFS.exists(path);
+  if (storage == &SD) return SD.exists(path);
+  return false;
+}
+
+void markFileSent(const String &path) {
+  if (path.isEmpty()) return;
+  writeSidecar(path, ".sent", "1");
+  Serial.printf("[storage] 전송 완료 표시: %s\n", path.c_str());
+}
+
+// 공간이 부족하면 전송 완료(.sent)된 가장 오래된 파일부터 지운다.
+// 전송되지 않은 파일은 절대 지우지 않는다.
+bool ensureSpace(size_t needed) {
+  if (storageFreeBytes() >= needed) return true;
+  if (storage == &SD) return false;
+  if (storage == nullptr) return false;
+
+  struct Candidate {
+    String path;
+    time_t when;
+  };
+  std::vector<Candidate> candidates;
+  File dir = storage->open("/recordings");
+  if (dir) {
+    File entry = dir.openNextFile();
+    while (entry) {
+      String name = entry.name();
+      if (!entry.isDirectory() && name.endsWith(".wav")) {
+        String path = name.startsWith("/") ? name : String("/recordings/") + name;
+        const String marker = sidecarPath(path, ".sent");
+        if (fileExists(marker)) {
+          candidates.push_back({path, entry.getLastWrite()});
+        }
+      }
+      entry.close();
+      entry = dir.openNextFile();
+    }
+    dir.close();
+  }
+
+  std::sort(candidates.begin(), candidates.end(),
+            [](const Candidate &a, const Candidate &b) { return a.when < b.when; });
+
+  for (const auto &candidate : candidates) {
+    if (storageFreeBytes() >= needed) break;
+    Serial.printf("[storage] 오래된 전송 완료 파일 삭제: %s\n", candidate.path.c_str());
+    storage->remove(candidate.path);
+    storage->remove(sidecarPath(candidate.path, ".id"));
+    storage->remove(sidecarPath(candidate.path, ".sha256"));
+    storage->remove(sidecarPath(candidate.path, ".sent"));
+  }
+  Serial.printf("[storage] 확보 후 여유=%u bytes\n", static_cast<unsigned>(storageFreeBytes()));
+  return storageFreeBytes() >= needed;
+}
+
+void listRecordings() {
+  File dir = storage->open("/recordings");
+  if (!dir) return;
+  File entry = dir.openNextFile();
+  while (entry) {
+    String name = entry.name();
+    if (!entry.isDirectory() && name.endsWith(".wav")) {
+      String path = name.startsWith("/") ? name : String("/recordings/") + name;
+      Serial.printf("[file] %s size=%u sent=%d\n", path.c_str(),
+                    static_cast<unsigned>(entry.size()),
+                    fileExists(sidecarPath(path, ".sent")) ? 1 : 0);
+    }
+    entry.close();
+    entry = dir.openNextFile();
+  }
+  dir.close();
+}
+
 void hardwareCheck() {
   const char *kind = storage == &SD ? "SD" : storage == &LittleFS ? "LittleFS" : "none";
   Serial.printf("[hw] storage=%s free=%u bytes\n", kind, static_cast<unsigned>(storageFreeBytes()));
@@ -740,7 +828,7 @@ void hardwareCheck() {
 
 bool recordFixed(const String &path, int seconds) {
   if (!initPdm()) return false;
-  if (storageFreeBytes() < 700000) {
+  if (!ensureSpace(250000)) {
     Serial.println("[fixed] 저장 공간 부족");
     stopPdm();
     return false;
@@ -777,7 +865,7 @@ void recordNow() {
   if (storage == nullptr) return;
   const String path = "/recordings/rec_" + String(static_cast<uint32_t>(millis())) + ".wav";
   bool ok = recordVadClip(path, 20);
-  if (!ok) {
+  if (!ok && storageFreeBytes() > 400000) {
     writeTestWav(path);
     ok = true;
   }
@@ -818,6 +906,8 @@ void loop() {
       recordNow();
     } else if (command == 'h') {
       hardwareCheck();
+    } else if (command == 'l') {
+      listRecordings();
     } else if (command == 's') {
       sdProbe();
     } else if (command == 'c' && !connected) {
