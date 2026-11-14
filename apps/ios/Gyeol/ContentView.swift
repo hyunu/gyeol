@@ -30,6 +30,7 @@ struct ContentView: View {
 
 struct LoginView: View {
     @ObservedObject var auth: AuthController
+    @AppStorage("apiBaseURL") private var baseURL = "http://127.0.0.1:8080"
 
     var body: some View {
         ZStack {
@@ -64,7 +65,19 @@ struct LoginView: View {
                         .foregroundStyle(GyeolTheme.accent)
                 }
 
-                Text("로그인 후 서버 세션이 발급됩니다. 토큰은 Keychain 에만 저장합니다.")
+                TextField("서버 주소 (예: http://192.168.0.9:8080)", text: $baseURL)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                Button("로컬 데모로 시작 (개발용)") {
+                    auth.startLocalDemo()
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity, minHeight: 44)
+
+                Text("Apple 로그인은 App ID 가 필요합니다. 로컬 데모는 GYEOL_ENV=local 서버에서만 동작합니다.")
                     .font(.caption)
                     .foregroundStyle(GyeolTheme.ink3)
             }

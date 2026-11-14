@@ -44,6 +44,12 @@ Swift 패키지 테스트(macOS):
 swift test --package-path apps/ios/Packages/GyeolBLE
 ```
 
+## 로컬 데모
+
+Apple App ID 없이 UI·BLE 를 확인할 때 로그인 화면의 **로컬 데모로 시작**을 쓴다.
+서버가 `GYEOL_ENV=local` 일 때만 `X-User-Id` 임시 인증이 허용된다(ADR-0003).
+실기기에서는 로그인 화면의 서버 주소를 Mac LAN 주소(예: `http://192.168.0.9:8080`)로 바꾼다.
+
 ## Sign in with Apple
 
 - `Gyeol.entitlements` 에 `com.apple.developer.applesignin` 포함.

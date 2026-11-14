@@ -31,3 +31,6 @@ tmp/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# 로컬 배포 산출물
+apps/web/public/downloads/*.ipa

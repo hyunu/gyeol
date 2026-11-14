@@ -65,6 +65,20 @@ final class AuthController: ObservableObject {
         }
     }
 
+    /// Apple 개발자 설정 없이 UI·BLE 를 확인하기 위한 로컬 데모 세션.
+    /// API 가 GYEOL_ENV=local 일 때만 동작한다(X-User-Id).
+    func startLocalDemo() {
+        let session = AuthSession(
+            token: "",
+            tokenType: "local",
+            expiresAt: "2099-12-31T00:00:00Z",
+            user: AuthUser(id: "0199aaaa-0000-7000-8000-000000000001", displayName: "로컬 데모")
+        )
+        self.session = session
+        SessionStore.save(session)
+        error = nil
+    }
+
     func signOut() {
         session = nil
         SessionStore.clear()

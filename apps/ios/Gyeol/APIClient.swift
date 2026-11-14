@@ -117,15 +117,24 @@ struct ApiClient {
 
     func listConversations(token: String) async throws -> [ConversationSummary] {
         var request = URLRequest(url: baseURL.appending(path: "/api/v1/conversations"))
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+        authorize(&request, token: token)
         let page: ConversationPage = try await send(request)
         return page.items
     }
 
     func getConversation(id: String, token: String) async throws -> ConversationDetail {
         var request = URLRequest(url: baseURL.appending(path: "/api/v1/conversations/\(id)"))
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+        authorize(&request, token: token)
         return try await send(request)
+    }
+
+    private func authorize(_ request: inout URLRequest, token: String) {
+        if token.isEmpty {
+            // 로컬 데모 세션: 서버가 GYEOL_ENV=local 일 때만 허용된다.
+            request.setValue("0199aaaa-0000-7000-8000-000000000001", forHTTPHeaderField: "x-user-id")
+        } else {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+        }
     }
 
     private func send<T: Decodable>(_ request: URLRequest) async throws -> T {
