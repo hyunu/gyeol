@@ -10,6 +10,7 @@
  *   GYEOL_STORE=postgres npm run bench
  */
 import { mkdtemp } from "node:fs/promises";
+import pg from "pg";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createApp } from "../apps/api/src/http/server.ts";
@@ -29,6 +30,7 @@ const CONCURRENCY = Number(process.env.BENCH_CONCURRENCY ?? 20);
 const DURATION_MS = Number(process.env.BENCH_DURATION_MS ?? 5000);
 const CONVERSATIONS = Number(process.env.BENCH_CONVERSATIONS ?? 120);
 const USER = uuidv7();
+const WITH_INDEX = process.env.BENCH_INDEX === "1";
 
 const store = new PostgresStore({ connectionString: DATABASE_URL });
 const storageDir = await mkdtemp(path.join(tmpdir(), "gyeol-bench-"));
@@ -46,7 +48,24 @@ const server = createApp({
   logger: { info: () => undefined, error: () => undefined },
 });
 
+const indexClient = WITH_INDEX ? new pg.Client({ connectionString: DATABASE_URL }) : null;
+if (indexClient) await indexClient.connect();
+
 try {
+  if (indexClient) {
+    console.log("[bench] trigram 인덱스 생성 중…");
+    await indexClient.query("CREATE EXTENSION IF NOT EXISTS pg_trgm");
+    await indexClient.query(
+      "CREATE INDEX IF NOT EXISTS bench_segments_trgm ON transcript_segments USING gin (text gin_trgm_ops)",
+    );
+    await indexClient.query(
+      "CREATE INDEX IF NOT EXISTS bench_title_trgm ON conversations USING gin (title gin_trgm_ops)",
+    );
+    await indexClient.query(
+      "CREATE INDEX IF NOT EXISTS bench_summary_trgm ON conversations USING gin (summary gin_trgm_ops)",
+    );
+  }
+
   const seeded = await seed();
   await new Promise((resolve, reject) => {
     server.once("error", reject);
@@ -66,7 +85,8 @@ try {
   const scenarios = [
     ["대화 목록", `${baseUrl}/api/v1/conversations?size=20`],
     ["대화 상세", `${baseUrl}/api/v1/conversations/${seeded.conversationId}`],
-    ["키워드 검색", `${baseUrl}/api/v1/conversations?q=${encodeURIComponent("bench")}`],
+    ["키워드 검색(광범위)", `${baseUrl}/api/v1/conversations?q=${encodeURIComponent("bench")}`],
+    ["키워드 검색(선택적)", `${baseUrl}/api/v1/conversations?q=${encodeURIComponent("code-9999")}`],
     ["기기 목록", `${baseUrl}/api/v1/devices`],
   ];
 
@@ -83,6 +103,12 @@ try {
 } finally {
   await new Promise((resolve) => server.close(resolve));
   await store.purgeUser(USER).catch(() => undefined);
+  if (indexClient) {
+    for (const index of ["bench_segments_trgm", "bench_title_trgm", "bench_summary_trgm"]) {
+      await indexClient.query(`DROP INDEX IF EXISTS ${index}`).catch(() => undefined);
+    }
+    await indexClient.end();
+  }
   await store.close?.();
 }
 
@@ -156,7 +182,7 @@ async function seed() {
     const conversation = await store.createConversation({
       userId: USER,
       title: `벤치 대화 ${i}`,
-      summary: "bench 성능 측정용 대화입니다. 검색과 목록 지연을 확인합니다.",
+      summary: `bench 성능 측정용 대화입니다. code-${i} 검색과 목록 지연을 확인합니다.`,
       language: "ko",
       startedAt,
       endedAt,
