@@ -238,12 +238,32 @@ export function App() {
 
       <header className="masthead">
         <div className="masthead__brand">
-          <h1 className="masthead__title">결</h1>
-          <p className="masthead__tagline">목소리로 남긴 하루의 기록</p>
+          <span className="brand-mark" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+          <div className="masthead__wordmark">
+            <h1 className="masthead__title">결</h1>
+            <p className="masthead__tagline">목소리로 남긴 하루의 기록</p>
+          </div>
         </div>
-        <p className="masthead__meta">
-          {listRefreshing ? "갱신 중…" : `${total}건의 기록`}
-        </p>
+
+        <div className="masthead__right">
+          <div className="meter" aria-hidden="true">
+            {Array.from({ length: 12 }, (_, index) => (
+              <i key={index} style={{ animationDelay: `${index * 90}ms` }} />
+            ))}
+          </div>
+          <span className="status">
+            <span className="status__dot" aria-hidden="true" />
+            LOCAL
+          </span>
+          <p className="masthead__meta" aria-live="polite">
+            {listRefreshing ? "갱신 중…" : `${total}건의 기록`}
+          </p>
+        </div>
       </header>
 
       <div className={selectedId ? "layout layout--detail" : "layout"}>

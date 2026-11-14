@@ -30,6 +30,23 @@ function groupByDay(items: ConversationSummary[]) {
   return groups;
 }
 
+function ArrowIcon() {
+  return (
+    <svg
+      className="entry__go"
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" strokeLinecap="square" />
+    </svg>
+  );
+}
+
 export function Timeline({
   state,
   conversations,
@@ -51,6 +68,7 @@ export function Timeline({
           <h2 id="timeline-heading">대화 타임라인</h2>
           {state === "ready" && <span className="count">{total}건</span>}
         </div>
+        <p className="timeline__sub">최근 대화부터 날짜별로 쌓입니다.</p>
       </header>
 
       {state === "loading" && (
@@ -58,9 +76,9 @@ export function Timeline({
           <span className="sr-only">기록을 불러오는 중입니다.</span>
           {[0, 1, 2].map((row) => (
             <div className="entry entry--skeleton" key={row}>
+              <span className="skeleton skeleton--meta" />
               <span className="skeleton skeleton--title" />
               <span className="skeleton skeleton--line" />
-              <span className="skeleton skeleton--meta" />
             </div>
           ))}
         </div>
@@ -109,6 +127,7 @@ export function Timeline({
                     {Number(month)}월 · {weekday}
                   </span>
                   <span className="day__year">{year}</span>
+                  <span className="day__spine" />
                 </div>
 
                 <div className="day__body">
@@ -125,19 +144,25 @@ export function Timeline({
                             aria-current={selected ? "true" : undefined}
                             onClick={() => onSelect(item.id)}
                           >
+                            <span className="entry__top">
+                              <span className="entry__time">{timeLabel(item.startedAt)}</span>
+                              <span className="entry__relative">
+                                {relativeLabel(item.startedAt)}
+                              </span>
+                            </span>
                             <span className="entry__title">{item.title || "제목 없는 기록"}</span>
-                            <span className="entry__summary">{item.summary || "요약이 아직 없습니다."}</span>
+                            <span className="entry__summary">
+                              {item.summary || "요약이 아직 없습니다."}
+                            </span>
                             <span className="entry__meta">
-                              <span>{timeLabel(item.startedAt)}</span>
-                              <span aria-hidden="true">·</span>
                               <span>{durationLabel(item.startedAt, item.endedAt)}</span>
                               {people && (
                                 <>
-                                  <span aria-hidden="true">·</span>
+                                  <span className="entry__dot" aria-hidden="true" />
                                   <span>{people}</span>
                                 </>
                               )}
-                              <span className="entry__relative">{relativeLabel(item.startedAt)}</span>
+                              <ArrowIcon />
                             </span>
                           </button>
                         </li>
