@@ -77,6 +77,21 @@ jobs:
           S3_FORCE_PATH_STYLE: "true"
         run: npm run test:s3
 
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: platformio-${{ hashFiles('firmware/esp32s3/platformio.ini') }}
+      - run: pip install platformio
+      - name: ESP32-S3 펌웨어 빌드
+        run: pio run -d firmware/esp32s3
+
   e2e:
     runs-on: ubuntu-latest
     steps:
