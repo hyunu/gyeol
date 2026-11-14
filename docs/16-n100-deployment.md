@@ -38,3 +38,12 @@ GYEOL 데모 스택을 n100-service-hub 단일 서비스(`gyeol`)로 배포한�
 
 `hub_deploy_rollback(deployment_id="dep-1fd6cbecfde8", confirmed=true)` 는 직전 성공 스냅샷으로 되돌린다.
 첫 배포이므로 직전 스냅샷은 없고, 문제 시 `hub_deploy_apply` 로 compose down/up 하거나 서비스를 중지한다.
+
+## 재배포 — 대시보드 개편 (2026-11-14)
+
+- 커밋 `30ce0c0` 의 웹 UI를 반영해 `hub_service_sync_source` → `hub_deploy_apply` 를 다시 실행했다.
+- 배포 ID `dep-43cef8fdfc5e`. 웹 이미지는 재빌드되어 `index-DJRqdQAL.css` 를 서빙한다.
+- 실제 런타임은 정상이다: `web`/`api`/`db` running, `/healthz` 200, Basic Auth `/` 200, 데모 대화 3건.
+- 다만 허브의 배포 기록은 `running` 으로 남아 있다. `compose up` 완료 후 상태 갱신 단계에서 500이 발생했고,
+  컨테이너는 정상 기동됐다. 후속 배포 전에 허브 서버 로그 확인이 필요하다.
+
