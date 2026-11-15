@@ -295,6 +295,26 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 - 릴리스 판정은 **NO-GO** 다. 실물·실 provider·배포 인증서 등 10개 차단 항목은
   `docs/15-release-checklist.md` 에 정리했다.
 
+## 2.15 iOS 서버 업로드 (W-24, 2026-11-16)
+
+| # | 검증 | 근거 | 결과 |
+| --- | --- | --- | --- |
+| 1 | WAV `fmt `/`data` 파생(codec·sampleRate·channels·duration) | `tests` WavMetadata 5건 | 통과 |
+| 2 | 헤더만 읽어도 전체 파일 크기로 duration 계산 | 동일 | 통과 |
+| 3 | 청크 범위·`OFFSET_MISMATCH` 복구(`expected` 우선) | `UploadPlannerTests` 4건 | 통과 |
+| 4 | 파일별 ACK 상태 리셋·재연결 `OPEN_REQ` 강제 | `AckThrottleTests` 4건, `ReceiverTests` 2건 | 통과 |
+| 5 | 부분 파일 append·범위 읽기·생성 시각 | `FileTransferStoreTests` 4건 | 통과 |
+| 6 | Fake 폰 오프셋 복구·서버 재개 | `tests/integration.test.ts` | 통과 |
+| 7 | TS 계약·타입·단위/통합 | `npm run check` (**55 tests**) | 통과 |
+| 8 | Swift BLE 패키지 | `swift test` (**32 tests**) | 통과 |
+| 9 | iOS 시뮬레이터 빌드 | `xcodebuild ... iphonesimulator` | 통과 |
+
+- 업로드 순서: 기기 등록 → 녹음 생성 → 청크 PUT → `/ack` → `/analyze`.
+- `LIST_RES` 가 시각·코덱을 주지 않으므로 WAV 헤더에서 파생하고, `startedAt` 은
+  수신 시작 시각에서 길이를 뺀 근사값이다. 기기 RTC 도입 전까지 한계로 남긴다.
+- 실기기에서 Sign in with Apple + BLE + 업로드/ACK/분석을 확인하기 전까지 W-24 는
+  `PARTIAL(구현)` 이며 릴리스 차단 2번은 유지한다.
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |

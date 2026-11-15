@@ -61,6 +61,9 @@
 - `sha256` 은 소문자 hex 64자다.
 - `ACK.receivedBytes` 는 **누적 수신 바이트**(다음 기대 오프셋)다.
 - `COMPLETE_RES.status`: `ok` | `mismatch` | `duplicate`.
+- `LIST_RES` 는 파일 메타데이터를 모두 담지 않는다. 폰은 WAV `fmt `/`data` 청크에서
+  `codec`·`sampleRateHz`·`channels`·`durationMs` 를 파생한다. 기기에 RTC 가 없으므로
+  `startedAt` 은 수신 시작 시각에서 길이를 뺀 근사값을 쓴다(W-24, `apps/ios/README.md`).
 
 ## 4. 흐름
 
@@ -96,8 +99,9 @@
 
 - ACK 는 누적이다. 송신측은 `nextOffset - acked` 가 창 크기를 넘지 않도록 DATA 를 보내고,
   ACK 가 오면 그만큼 창을 채운다.
-- 수신측은 **매 프레임 ACK 하지 않아도 된다.** 8프레임(또는 LAST)마다 한 번 ACK 하면
+- 수신측은 **매 프레임 ACK 하지 않아도 된다.** 4프레임(또는 LAST)마다 한 번 ACK 하면
   BLE 왕복 횟수가 줄어 전송이 빨라진다. 실측에서 160KB 기준 28s → 14s 로 줄었다.
+  파일이 바뀌면 누적 바이트 기준을 리셋해야 한다(두 번째 파일에서 ACK 가 멈추지 않도록).
 - ACK 가 1초 이상 오지 않으면 송신측은 `acked` 지점부터 다시 보낸다(최대 6회).
 - **이어받기**: `OPEN_REQ` 에 대해 폰이 저장 중인 부분 파일 길이를 `startOffset` 으로 돌려준다.
   기기는 그 지점부터 DATA 를 보낸다. 폰 앱이 재시작돼도 부분 파일을 유지해야 한다.

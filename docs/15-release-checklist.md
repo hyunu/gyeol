@@ -18,6 +18,7 @@
 | iOS 시뮬레이터 빌드 | PASS | 4.0s |
 
 - **8/8 통과**, 오류 0. 실행 로그는 CI/로컬에서 재현한다.
+- 테스트 수는 2026-11-16 기준 TS **55** · Swift **32** 으로 갱신됐다(나머지 수치는 2026-11-14 실행 기록).
 - 성능 기준선: 목록 p95 14.9ms, 상세 16.8ms, 검색 19.7ms (120건·동시성 20).
 
 ## 2. 릴리스 차단 목록 (NO-GO 사유)
@@ -25,7 +26,7 @@
 | # | 차단 항목 | 현재 상태 | 해소 조건 |
 | ---: | --- | --- | --- |
 | 1 | **nRF52840 Sense 실물** | ESP32-S3 개발 보드만 연결. SD/PDM 미동작(Sense 변형 아님 가능성) | Sense 보드에서 PDM·microSD·VAD 실측 (W-21) |
-| 2 | **iOS 실기기 E2E** | 시뮬레이터 빌드만. 연결된 iPhone 없음 | 실기기에서 Sign in with Apple + BLE 전송 (W-24) |
+| 2 | **iOS 실기기 E2E** | 시뮬레이터 빌드만. 연결된 iPhone 없음 | 실기기에서 Sign in with Apple + BLE 전송 + 서버 업로드/ACK/분석 (W-24) |
 | 3 | **Apple 실 토큰 검증** | Fake verifier 로 서버 경로만 검증 (ENV-09) | App ID/Service ID + 실제 identity token |
 | 4 | **In-House 배포 인증서** | Apple Distribution 인증서 없음 | 팀 관리자가 인증서 발급·설치 |
 | 5 | **실제 AI provider** | HTTP 계약·mock 테스트만 (ENV-05) | provider 선정·키·비용/데이터 정책, 실측 |

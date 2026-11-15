@@ -14,9 +14,32 @@ public struct BleFileMeta: Codable, Sendable, Equatable {
     }
 }
 
+/// 기기가 `HELLO` 로 알려 주는 신원 정보. 서버 기기 등록에 쓴다.
+public struct BleHello: Codable, Sendable, Equatable {
+    public let serialNo: String
+    public let model: String?
+    public let firmwareVersion: String?
+    public let pendingFiles: Int?
+
+    public init(serialNo: String, model: String? = nil, firmwareVersion: String? = nil, pendingFiles: Int? = nil) {
+        self.serialNo = serialNo
+        self.model = model
+        self.firmwareVersion = firmwareVersion
+        self.pendingFiles = pendingFiles
+    }
+}
+
 public protocol TransferStore: AnyObject {
     func get(_ clientRecordingId: String) -> (data: Data, sha256: String?)?
     func put(_ clientRecordingId: String, data: Data, sha256: String?)
+    /// 현재까지 저장된 바이트 수. 전체 파일을 읽지 않아야 한다.
+    func size(_ clientRecordingId: String) -> Int
+    /// `offset` 위치에 청크를 append 하고 새 크기를 돌려준다.
+    func append(_ clientRecordingId: String, offset: Int, data: Data) -> Int
+    /// `offset` 부터 `length` 바이트만 읽는다. 업로드 청크 전송에 쓴다.
+    func read(_ clientRecordingId: String, offset: Int, length: Int) -> Data
+    /// 완료된 파일의 SHA-256 을 기록한다.
+    func setSha256(_ clientRecordingId: String, sha256: String)
     func list() -> [BleFileMeta]
 }
 
@@ -31,6 +54,32 @@ public final class MemoryTransferStore: TransferStore {
 
     public func put(_ clientRecordingId: String, data: Data, sha256: String?) {
         files[clientRecordingId] = (data, sha256)
+    }
+
+    public func size(_ clientRecordingId: String) -> Int {
+        files[clientRecordingId]?.data.count ?? 0
+    }
+
+    public func append(_ clientRecordingId: String, offset: Int, data: Data) -> Int {
+        var entry = files[clientRecordingId] ?? (Data(), nil)
+        guard entry.data.count == offset else { return entry.data.count }
+        entry.data.append(data)
+        files[clientRecordingId] = entry
+        return entry.data.count
+    }
+
+    public func read(_ clientRecordingId: String, offset: Int, length: Int) -> Data {
+        guard let entry = files[clientRecordingId], offset >= 0, length > 0, offset < entry.data.count else {
+            return Data()
+        }
+        let end = min(entry.data.count, offset + length)
+        return entry.data.subdata(in: offset..<end)
+    }
+
+    public func setSha256(_ clientRecordingId: String, sha256: String) {
+        var entry = files[clientRecordingId] ?? (Data(), nil)
+        entry.sha256 = sha256
+        files[clientRecordingId] = entry
     }
 
     public func list() -> [BleFileMeta] {
@@ -78,15 +127,28 @@ public final class BleTransferReceiver {
     private var currentId: String?
     private var seq: UInt32 = 0
     private var completed: Set<String> = []
+    /// 마지막으로 받은 `HELLO` 정보. 기기 등록에 쓴다.
+    public private(set) var hello: BleHello?
 
     public init(store: TransferStore, chunkSizeBytes: Int = BleProtocol.recommendedChunkBytes) {
         self.store = store
         self.chunkSizeBytes = chunkSizeBytes
     }
 
+    /// 연결이 끊겼을 때 호출한다. 다음 연결은 `OPEN_REQ` 부터 다시 시작해야 한다.
+    /// (그렇지 않으면 재연결 후 OPEN 없이 온 DATA 를 이전 파일에 붙일 수 있다.)
+    public func resetConnection() {
+        currentId = nil
+        seq = 0
+        hello = nil
+    }
+
     public func handle(_ frame: BleFrame) -> [BleFrame] {
         switch frame.type {
         case .hello:
+            if let hello = try? BleProtocol.parseJSON(BleHello.self, from: frame.payload) {
+                self.hello = hello
+            }
             return [reply(.helloAck, HelloAck(
                 protocolVersion: 1,
                 chunkSizeBytes: chunkSizeBytes,
@@ -100,7 +162,7 @@ public final class BleTransferReceiver {
                 return [error("BAD_JSON", "OPEN_REQ 를 해석할 수 없습니다.")]
             }
             currentId = request.clientRecordingId
-            let offset = store.get(request.clientRecordingId)?.data.count ?? 0
+            let offset = store.size(request.clientRecordingId)
             return [reply(.openResponse, OpenResponse(
                 clientRecordingId: request.clientRecordingId,
                 startOffset: offset,
@@ -122,16 +184,18 @@ public final class BleTransferReceiver {
         guard let (offset, chunk) = try? BleProtocol.parseDataPayload(frame.payload) else {
             return [error("BAD_DATA", "DATA payload 형식 오류")]
         }
-        let existing = store.get(currentId)?.data ?? Data()
-        if offset < UInt64(existing.count) {
-            return [ack(currentId, existing.count)]
+        let existingCount = store.size(currentId)
+        if offset < UInt64(existingCount) {
+            return [ack(currentId, existingCount)]
         }
-        if offset > UInt64(existing.count) {
-            return [ack(currentId, existing.count)]
+        if offset > UInt64(existingCount) {
+            return [ack(currentId, existingCount)]
         }
-        let next = existing + chunk
-        store.put(currentId, data: next, sha256: store.get(currentId)?.sha256)
-        return [ack(currentId, next.count)]
+        guard offset <= UInt64(Int.max) else {
+            return [error("BAD_DATA", "offset 이 너무 큽니다.")]
+        }
+        let next = store.append(currentId, offset: Int(offset), data: chunk)
+        return [ack(currentId, next)]
     }
 
     private func onComplete(_ frame: BleFrame) -> [BleFrame] {
@@ -164,7 +228,7 @@ public final class BleTransferReceiver {
             ))]
         }
 
-        store.put(request.clientRecordingId, data: stored, sha256: digest)
+        store.setSha256(request.clientRecordingId, sha256: digest)
         completed.insert(request.clientRecordingId)
         currentId = nil
         return [reply(.completeResponse, CompleteResponse(

@@ -138,4 +138,77 @@ final class ReceiverTests: XCTestCase {
         XCTAssertEqual(response.first?.type, .error)
         XCTAssertEqual(try json(XCTUnwrap(response.first))["code"] as? String, "NO_OPEN_FILE")
     }
+
+    func testSequentialFilesUseIndependentOffsets() throws {
+        let store = MemoryTransferStore()
+        let receiver = BleTransferReceiver(store: store)
+
+        for (index, id) in ["rec:first", "rec:second"].enumerated() {
+            let open = receiver.handle(BleFrame(
+                type: .openRequest,
+                seq: UInt32(index * 10 + 1),
+                payload: try BleProtocol.jsonPayload(["clientRecordingId": id])
+            ))
+            XCTAssertEqual(try json(XCTUnwrap(open.first))["startOffset"] as? Int, 0)
+
+            let ack = receiver.handle(dataFrame(seq: UInt32(index * 10 + 2), offset: 0, text: "abc", last: true))
+            XCTAssertEqual(try json(XCTUnwrap(ack.first))["receivedBytes"] as? Int, 3)
+
+            let complete = receiver.handle(BleFrame(
+                type: .completeRequest,
+                seq: UInt32(index * 10 + 3),
+                payload: try BleProtocol.jsonPayload(CompleteRequest(
+                    clientRecordingId: id,
+                    byteSize: 3,
+                    sha256: sha256(Data("abc".utf8))
+                ))
+            ))
+            XCTAssertEqual(try json(XCTUnwrap(complete.first))["status"] as? String, "ok")
+        }
+
+        XCTAssertEqual(store.get("rec:first")?.data, Data("abc".utf8))
+        XCTAssertEqual(store.get("rec:second")?.data, Data("abc".utf8))
+    }
+
+    func testHelloMetadataIsExposed() throws {
+        let receiver = BleTransferReceiver(store: MemoryTransferStore())
+        let response = receiver.handle(BleFrame(
+            type: .hello,
+            seq: 1,
+            payload: try BleProtocol.jsonPayload(BleHello(
+                serialNo: "GYL-ESP32S3-1",
+                model: "esp32s3-dev",
+                firmwareVersion: "0.1.0-esp32s3",
+                pendingFiles: 1
+            ))
+        ))
+
+        XCTAssertEqual(response.first?.type, .helloAck)
+        XCTAssertEqual(
+            receiver.hello,
+            BleHello(
+                serialNo: "GYL-ESP32S3-1",
+                model: "esp32s3-dev",
+                firmwareVersion: "0.1.0-esp32s3",
+                pendingFiles: 1
+            )
+        )
+    }
+
+    func testResetConnectionRequiresOpenAgain() throws {
+        let receiver = BleTransferReceiver(store: MemoryTransferStore())
+        _ = receiver.handle(BleFrame(
+            type: .openRequest,
+            seq: 1,
+            payload: try BleProtocol.jsonPayload(["clientRecordingId": "rec:1"])
+        ))
+        _ = receiver.handle(dataFrame(seq: 2, offset: 0, text: "abc", last: true))
+
+        receiver.resetConnection()
+
+        let response = receiver.handle(dataFrame(seq: 3, offset: 3, text: "def"))
+        XCTAssertEqual(response.first?.type, .error)
+        XCTAssertEqual(try json(XCTUnwrap(response.first))["code"] as? String, "NO_OPEN_FILE")
+        XCTAssertNil(receiver.hello)
+    }
 }

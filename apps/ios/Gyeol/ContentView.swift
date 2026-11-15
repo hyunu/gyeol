@@ -1,4 +1,5 @@
 import AuthenticationServices
+import GyeolBLE
 import SwiftUI
 
 @main
@@ -97,7 +98,7 @@ struct MainView: View {
         TabView {
             ConversationsView(session: session)
                 .tabItem { Label("기록", systemImage: "book") }
-            DeviceView(ble: ble)
+            DeviceView(ble: ble, session: session)
                 .tabItem { Label("기기", systemImage: "dot.radiowaves.left.and.right") }
             SettingsView()
                 .tabItem { Label("설정", systemImage: "gearshape") }
@@ -273,6 +274,8 @@ struct ConversationDetailView: View {
 
 struct DeviceView: View {
     @ObservedObject var ble: BleCentral
+    let session: AuthSession
+    @StateObject private var upload = UploadController()
 
     var body: some View {
         NavigationStack {
@@ -281,6 +284,12 @@ struct DeviceView: View {
                     LabeledContent("Bluetooth", value: stateText)
                     if let name = ble.connectedName {
                         LabeledContent("기기", value: name)
+                    }
+                    if let hello = ble.hello {
+                        LabeledContent("시리얼", value: hello.serialNo)
+                        if let model = hello.model {
+                            LabeledContent("모델", value: model)
+                        }
                     }
                     HStack {
                         Button("검색") { ble.startScan() }
@@ -313,6 +322,74 @@ struct DeviceView: View {
                     }
                 }
 
+                Section("서버 업로드") {
+                    if let device = upload.device {
+                        LabeledContent("등록된 기기", value: device.model)
+                    }
+                    Button {
+                        Task {
+                            await upload.uploadPending(
+                                files: ble.completedFiles,
+                                hello: ble.hello,
+                                session: session
+                            )
+                        }
+                    } label: {
+                        if upload.busy {
+                            HStack {
+                                ProgressView()
+                                Text("업로드 중…")
+                            }
+                        } else {
+                            Text("완료 파일 올리기")
+                        }
+                    }
+                    .disabled(upload.busy || ble.completedFiles.isEmpty || ble.hello == nil)
+
+                    if upload.items.isEmpty {
+                        Text("올릴 파일이 없습니다.")
+                            .foregroundStyle(GyeolTheme.ink3)
+                    } else {
+                        ForEach(upload.items) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(shortId(item.clientRecordingId))
+                                        .font(.footnote)
+                                    Spacer()
+                                    Text(phaseText(item.phase))
+                                        .font(.caption)
+                                        .foregroundStyle(phaseColor(item.phase))
+                                }
+                                ProgressView(value: item.progress)
+                                Text("\(item.uploadedBytes) / \(item.byteSize) bytes")
+                                    .font(.caption2)
+                                    .foregroundStyle(GyeolTheme.ink3)
+                                if let recordingId = item.recordingId {
+                                    Text("recording \(shortId(recordingId))")
+                                        .font(.caption2)
+                                        .foregroundStyle(GyeolTheme.ink3)
+                                }
+                                if let jobId = item.analysisJobId {
+                                    Text("analysis job \(shortId(jobId))")
+                                        .font(.caption2)
+                                        .foregroundStyle(GyeolTheme.ink3)
+                                }
+                                if let error = item.error {
+                                    Text(error)
+                                        .font(.caption2)
+                                        .foregroundStyle(GyeolTheme.accent)
+                                }
+                            }
+                        }
+                    }
+
+                    if let error = upload.error {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(GyeolTheme.accent)
+                    }
+                }
+
                 if let error = ble.error {
                     Section {
                         Text(error).foregroundStyle(GyeolTheme.accent)
@@ -322,6 +399,38 @@ struct DeviceView: View {
             .navigationTitle("기기")
             .scrollContentBackground(.hidden)
             .background(GyeolTheme.base)
+            .task {
+                upload.refresh(files: ble.completedFiles)
+            }
+            .onChange(of: ble.completedFiles) { _, files in
+                upload.refresh(files: files)
+            }
+        }
+    }
+
+    private func shortId(_ value: String) -> String {
+        value.count <= 18 ? value : "\(value.prefix(8))…\(value.suffix(6))"
+    }
+
+    private func phaseText(_ phase: UploadPhase) -> String {
+        switch phase {
+        case .ready: return "대기"
+        case .uploading: return "업로드 중"
+        case .uploaded: return "검증됨 (ACK 전)"
+        case .acked: return "ACK 완료"
+        case .analyzing: return "분석 요청됨"
+        case .failed: return "실패"
+        }
+    }
+
+    private func phaseColor(_ phase: UploadPhase) -> Color {
+        switch phase {
+        case .failed:
+            return GyeolTheme.accent
+        case .analyzing, .acked:
+            return GyeolTheme.ink2
+        default:
+            return GyeolTheme.ink3
         }
     }
 

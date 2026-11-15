@@ -22,6 +22,12 @@ export interface EnqueueResult {
   reused: boolean;
 }
 
+/**
+ * `decideIdentification` 은 후보 id 를 그대로 돌려준다. 아직 persons 행을 만들지 않은
+ * 상태에서 임계값·격차만 판정하기 위한 임시 id 다. 실제 저장에는 쓰지 않는다.
+ */
+const PENDING_PERSON_ID = "00000000-0000-0000-0000-000000000000";
+
 export async function enqueueAnalysis(
   deps: Deps,
   userId: string,
@@ -109,15 +115,22 @@ async function runClaimedJob(deps: Deps, job: AnalysisJob): Promise<void> {
       let confidence: number | null = null;
 
       if (speaker.personName) {
-        const person = await ensurePerson(deps, job.userId, speaker.personName);
+        const existingPerson = await deps.store.findPerson(job.userId, speaker.personName);
+        // 아직 사람을 만들지 않았으므로 판정용 임시 id 를 쓴다. 판정이 unknown 이면
+        // persons 행을 만들지 않는다(Unknown Speaker 불변식).
         const decision = decideIdentification(
-          [{ personId: person.id, score: speaker.confidence ?? 0 }],
+          [{ personId: existingPerson?.id ?? PENDING_PERSON_ID, score: speaker.confidence ?? 0 }],
           deps.speakerThreshold.threshold,
           deps.speakerThreshold.margin,
         );
-        personId = decision.personId;
-        status = decision.status;
-        confidence = decision.confidence;
+        if (decision.status !== "unknown") {
+          const person = existingPerson ?? (await ensurePerson(deps, job.userId, speaker.personName));
+          personId = person.id;
+          status = decision.status;
+          confidence = decision.confidence;
+        } else {
+          confidence = decision.confidence;
+        }
       }
       speakers.push({ label: speaker.label, personId, identificationStatus: status, confidence });
     }

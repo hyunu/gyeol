@@ -14,6 +14,7 @@
 		5F46EA06346D20CC41FC6A41 /* AuthController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3829563EB6925B6D790A7CF8 /* AuthController.swift */; };
 		77F4206DD1E46A4BD80F237A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3239B8CFFCBD07D3DB8DCA87 /* ContentView.swift */; };
 		88481F1C782B48F1C2E4CEFD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43E145B7D73CCF2D9663AC0D /* Theme.swift */; };
+		C0A1B2C3D4E5F60718293A4B /* UploadController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A1B2C3D4E5F60718293A4B /* UploadController.swift */; };
 		FDC239330726A3CA9EC39061 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4FE85C26B3BCD94065C0F83 /* APIClient.swift */; };
 /* End PBXBuildFile section */
 
@@ -29,6 +30,7 @@
 		A4FE85C26B3BCD94065C0F83 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		B9FF2D4499029D3B9BC2F44B /* GyeolBLE */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GyeolBLE; path = Packages/GyeolBLE; sourceTree = SOURCE_ROOT; };
 		BEB845E36A6070A26C2CE362 /* Gyeol.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Gyeol.entitlements; sourceTree = "<group>"; };
+		D0A1B2C3D4E5F60718293A4B /* UploadController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,6 +82,7 @@
 				2B14E5C9DF2620CA22308473 /* Info.plist */,
 				2F6A6AF100FF2FD7ADC83C91 /* SessionStore.swift */,
 				43E145B7D73CCF2D9663AC0D /* Theme.swift */,
+				D0A1B2C3D4E5F60718293A4B /* UploadController.swift */,
 			);
 			path = Gyeol;
 			sourceTree = "<group>";
@@ -155,6 +158,7 @@
 				04C521BDAA0558FAC20AC055 /* DiskTransferStore.swift in Sources */,
 				349B9DBD3524CE01F061BF61 /* SessionStore.swift in Sources */,
 				88481F1C782B48F1C2E4CEFD /* Theme.swift in Sources */,
+				C0A1B2C3D4E5F60718293A4B /* UploadController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

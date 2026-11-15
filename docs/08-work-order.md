@@ -70,8 +70,8 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 | W-20 | BLE GATT 프로토콜 계약 | W-09 | 프레임·ACK·재전송·이어받기 명세 + 시뮬레이터 테스트 | `DONE` |
 | W-21 | 펌웨어 PDM·VAD·microSD | W-20 | 오프라인 누적·전원 차단 복구 시나리오 | `PARTIAL(ESP32-S3)` — PDM·VAD·LittleFS 회전·BLE 전송 검증. microSD는 슬롯 미응답, 음성 튜닝 필요 |
 | W-22 | 펌웨어 BLE 전송 | W-21 | 중단/재개 무손실·해시 일치 | `DONE(ESP32-S3)` — 160,300 bytes SHA 일치, 중단·재부팅 후 재개. nRF52840은 대기 |
-| W-23 | iOS CoreBluetooth 수신 | W-20 | Fake 기기로 수신·재개 검증 | `PARTIAL(빌드)` — Swift 13 tests·시뮬레이터 실행·device 빌드·주소 설정. 실기기 E2E 대기 |
-| W-24 | iOS 분석 실행·서버 업로드 | W-23, W-18 | 전 구간 E2E + 실측 기록 | `HW-PENDING` |
+| W-23 | iOS CoreBluetooth 수신 | W-20 | Fake 기기로 수신·재개 검증 | `PARTIAL(빌드)` — Swift 32 tests·시뮬레이터 실행·device 빌드·주소 설정. 실기기 E2E 대기 |
+| W-24 | iOS 분석 실행·서버 업로드 | W-23, W-18 | 전 구간 E2E + 실측 기록 | `PARTIAL(구현)` — 기기 등록→녹음 생성→청크 PUT→`/ack`→`/analyze` 상태 머신·WAV 메타데이터 파생·재시작 복구. 시뮬레이터 빌드/단위 테스트 통과, 실기기 E2E 대기 |
 
 ### Track 5 — 운영·보안·릴리스
 
@@ -86,10 +86,10 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 ## 4. 지금 위치
 
 - 완료: Track 0, Track 1, W-10~W-18, W-20, W-22(ESP32-S3), W-25(삭제·내보내기·감사), W-26, W-27
-- 부분: W-19 — 서버 세션·iOS 로그인 UI(실기기 대기), W-21 — PDM/LittleFS(VAD·SD·전원차단 대기), W-23 — iOS 빌드·수신기(실기기 대기)
+- 부분: W-19 — 서버 세션·iOS 로그인 UI(실기기 대기), W-21 — PDM/LittleFS(VAD·SD·전원차단 대기), W-23 — iOS 빌드·수신기(실기기 대기), W-24 — 업로드 상태 머신(실기기 E2E 대기)
 - 배포: n100-service-hub `gyeol` 서비스 배포 완료(web 18080, Basic Auth). `docs/16-n100-deployment.md`
 - 실기기: ESP32-S3 개발 보드로 BLE 전송·재개까지 검증. nRF52840 전환 시 재검증 필요
-- 다음(차단): W-21 실물(microSD/VAD 튜닝) · W-24 iPhone · W-28 실 provider 재측정
+- 다음(차단): W-21 실물(microSD/VAD 튜닝) · W-24 iPhone E2E · W-28 실 provider 재측정
 - 릴리스: **NO-GO** — `docs/15-release-checklist.md` 의 차단 목록 해소 후 재판정
 
 ## 5. 하지 말아야 할 순서

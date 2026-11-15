@@ -163,6 +163,38 @@ test("등록은 작업만 만들고, 워커가 실행하면 대화가 생긴다"
   assert.equal(detail?.segments.length, 3);
 });
 
+test("임계값 미달 화자는 persons 행을 만들지 않는다", async () => {
+  const base = new FakeAiPipeline();
+  const lowConfidence: AiPipeline = {
+    async analyze(input) {
+      const result = await base.analyze(input);
+      return {
+        ...result,
+        speakers: [
+          { label: "SPEAKER_1", personName: "저신뢰", confidence: 0.2 },
+          { label: "SPEAKER_2", personName: null, confidence: null },
+        ],
+      };
+    },
+    embedQuery: (text) => base.embedQuery(text),
+  };
+
+  const { deps, userId, recording, store } = await setup({ ai: lowConfidence });
+  const { job } = await enqueueAnalysis(deps, userId, recording.id);
+  await runNextAnalysisJob(deps);
+
+  const finished = await getAnalysisJob(deps, userId, job.id);
+  assert.ok(finished.conversationId);
+
+  const detail = await store.getConversationDetail(finished.conversationId);
+  const speaker = detail?.speakers.find((s) => s.label === "SPEAKER_1");
+  assert.equal(speaker?.personId, null);
+  assert.equal(speaker?.identificationStatus, "unknown");
+
+  const persons = await store.listPersons(userId, 1, 10);
+  assert.equal(persons.total, 0, "Unknown Speaker 는 persons 행을 만들지 않는다");
+});
+
 test("활성 작업이 있으면 새로 만들지 않는다(멱등)", async () => {
   const { deps, userId, recording } = await setup();
   const first = await enqueueAnalysis(deps, userId, recording.id);

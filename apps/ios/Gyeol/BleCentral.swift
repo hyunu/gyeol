@@ -14,6 +14,7 @@ final class BleCentral: NSObject, ObservableObject {
     @Published private(set) var connectedName: String?
     @Published private(set) var receivedBytes = 0
     @Published private(set) var completedFiles: [BleFileMeta] = []
+    @Published private(set) var hello: BleHello?
     @Published var error: String?
 
     private var central: CBCentralManager!
@@ -24,7 +25,7 @@ final class BleCentral: NSObject, ObservableObject {
     private let store = DiskTransferStore()
     private lazy var receiver = BleTransferReceiver(store: store)
     private let stream = BleFrameStream()
-    private var lastAckSent = 0
+    private var ackThrottle = AckThrottle()
 
     private let serviceUUID = CBUUID(string: BleProtocol.serviceUUID)
     private let txUUID = CBUUID(string: BleProtocol.txUUID)
@@ -32,6 +33,7 @@ final class BleCentral: NSObject, ObservableObject {
 
     override init() {
         super.init()
+        completedFiles = store.list()
         central = CBCentralManager(delegate: self, queue: .main)
     }
 
@@ -67,7 +69,10 @@ final class BleCentral: NSObject, ObservableObject {
     }
 
     private func resetConnection() {
-        lastAckSent = 0
+        ackThrottle.reset()
+        receiver.resetConnection()
+        hello = nil
+        receivedBytes = 0
         peripheral = nil
         tx = nil
         rx = nil
@@ -177,18 +182,22 @@ extension BleCentral: CBPeripheralDelegate {
                 for response in receiver.handle(frame) {
                     if response.type == .ack,
                        let object = try? JSONSerialization.jsonObject(with: response.payload) as? [String: Any],
+                       let id = object["clientRecordingId"] as? String,
                        let bytes = object["receivedBytes"] as? Int
                     {
-                        receivedBytes = max(receivedBytes, bytes)
-                        // 매 프레임 ACK 하면 BLE 왕복이 병목이다. 4프레임마다 한 번만 보낸다.
-                        let threshold = 4 * BleProtocol.recommendedChunkBytes
-                        if !frame.isLast && bytes - lastAckSent < threshold { continue }
-                        lastAckSent = bytes
+                        let sendAck = ackThrottle.shouldSend(
+                            clientRecordingId: id,
+                            receivedBytes: bytes,
+                            isLast: frame.isLast
+                        )
+                        receivedBytes = ackThrottle.receivedBytes
+                        if !sendAck { continue }
                     }
                     outbound.append(response)
                 }
             }
             completedFiles = store.list()
+            hello = receiver.hello
             if !outbound.isEmpty { send(outbound) }
         }
     }

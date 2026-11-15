@@ -21,6 +21,20 @@ interface ServerProblem {
   detail?: string;
 }
 
+/**
+ * `409 OFFSET_MISMATCH` 의 `detail` 에서 재개 오프셋을 읽는다.
+ *
+ * 서버는 `expected=<서버가 받은 바이트> received=<클라이언트가 보낸 오프셋>` 형태로
+ * 응답한다(`apps/api/src/domain/errors.ts`). 따라서 재개 지점은 `expected` 다.
+ * `received` 는 이전 형식과의 호환을 위한 폴백일 뿐이다.
+ */
+export function parseOffsetMismatch(detail: string): number | null {
+  const value = /expected=(\d+)/.exec(detail)?.[1] ?? /received=(\d+)/.exec(detail)?.[1];
+  if (value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 class Client {
   private readonly baseUrl: string;
   private readonly userId: string;
@@ -168,9 +182,9 @@ export class FakePhone {
       if (res.status === 409 && (res.body as ServerProblem).code === "OFFSET_MISMATCH") {
         // 서버가 이미 받은 지점으로 되돌린다(재시작·재연결 대비).
         const detail = (res.body as ServerProblem).detail ?? "";
-        const received = Number(/received=(\d+)/.exec(detail)?.[1] ?? NaN);
-        if (!Number.isFinite(received)) throw new Error(`오프셋 복구 실패: ${detail}`);
-        item.uploadedBytes = received;
+        const expected = parseOffsetMismatch(detail);
+        if (expected === null) throw new Error(`오프셋 복구 실패: ${detail}`);
+        item.uploadedBytes = expected;
         continue;
       }
       if (res.status >= 400) {

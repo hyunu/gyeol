@@ -10,7 +10,7 @@ import { FakeAiPipeline } from "../apps/api/src/adapters/ai/fake-pipeline.ts";
 import { defaultDeps, type Deps } from "../apps/api/src/usecases/deps.ts";
 import { drainAnalysisJobs } from "../apps/api/src/usecases/analysis.ts";
 import { FakeWearable } from "../packages/device-fake/index.ts";
-import { FakePhone } from "../packages/mobile-fake/index.ts";
+import { FakePhone, parseOffsetMismatch } from "../packages/mobile-fake/index.ts";
 import { runContractTests } from "../tools/contract-test.mjs";
 
 const USER = "0199aaaa-0000-7000-8000-000000000001";
@@ -270,6 +270,36 @@ test("전 구간: 기기 → BLE(중단/재개) → 업로드(중단/재개) →
   await drainAnalysisJobs(harness.deps);
   const all = await harness.call("GET", "/api/v1/conversations");
   assert.equal(all.body.total, 2, "서로 다른 대화 2건");
+});
+
+test("OFFSET_MISMATCH 복구는 서버 기대 오프셋(expected)을 사용한다", async () => {
+  assert.equal(parseOffsetMismatch("expected=1234 received=999"), 1234);
+  assert.equal(parseOffsetMismatch("received=512"), 512, "구 형식은 received 로 폴백");
+  assert.equal(parseOffsetMismatch("오프셋 없음"), null);
+
+  const harness = await startApp();
+  const wearable = new FakeWearable("GYL-IT-OFFSET");
+  const phone = new FakePhone({ bleChunkBytes: 4096, httpChunkBytes: 4096 });
+  const captured = await wearable.capture({ durationMs: 2_000 });
+  await phone.pull(wearable);
+  const device = await harness.call("POST", "/api/v1/devices", {
+    serialNo: wearable.serialNo,
+    model: wearable.model,
+  });
+  const file = phone.get(captured.clientRecordingId);
+
+  const partial = await phone.upload(harness.baseUrl, USER, device.body.id, file.file.clientRecordingId, {
+    interruptAtBytes: 4096,
+  });
+  assert.equal(partial.interrupted, true);
+  assert.equal(partial.uploadedBytes, 4096);
+
+  // 앱 재시작으로 로컬 오프셋이 0 이 됐다고 가정한다. 서버는 이미 4096 바이트를 받았다.
+  file.uploadedBytes = 0;
+  const resumed = await phone.upload(harness.baseUrl, USER, device.body.id, file.file.clientRecordingId);
+  assert.equal(resumed.interrupted, false);
+  assert.equal(resumed.uploadedBytes, file.file.bytes.length);
+  assert.equal(file.serverStatus, "stored");
 });
 
 test("세션 만료는 Recording 삭제가 아니며 새 세션으로 재전송할 수 있다", async () => {
