@@ -105,6 +105,12 @@ paths:
       responses:
         "201":
           description: 세션 발급됨
+          headers:
+            Set-Cookie:
+              description: |
+                웹용 세션 쿠키. `gyeol_session=<token>; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+                운영(`GYEOL_ENV != local`)에서는 `Secure` 가 추가된다(ADR-0010).
+              schema: { type: string }
           content:
             application/json:
               schema:
@@ -121,15 +127,23 @@ paths:
       operationId: signOut
       tags: [auth]
       summary: 현재 세션 폐기
-      description: 현재 요청에 사용한 세션을 폐기한다. `X-User-Id` 로컬 인증에는 효과가 없다.
+      description: |
+        현재 요청에 사용한 세션을 폐기한다. `X-User-Id` 로컬 인증에는 효과가 없다.
+        쿠키 인증으로 호출하면 `Set-Cookie` 로 빈 세션 쿠키(Max-Age=0)를 내려 브라우저에서도 지운다.
       security:
         - bearerAuth: []
         - sessionCookie: []
       responses:
         "204":
           description: 폐기됨(또는 세션이 아닌 인증)
+          headers:
+            Set-Cookie:
+              description: 세션 쿠키 삭제(`Max-Age=0`)
+              schema: { type: string }
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /api/v1/export:
     get:
@@ -552,7 +566,10 @@ components:
       type: apiKey
       in: cookie
       name: gyeol_session
-      description: "웹용 HttpOnly 세션 쿠키"
+      description: |
+        웹용 HttpOnly 세션 쿠키. `POST /api/v1/auth/apple` 응답의 `Set-Cookie` 로 발급된다.
+        쿠키 인증으로 `POST`·`PUT`·`PATCH`·`DELETE` 를 호출할 때는 `X-GYEOL-CSRF: 1`
+        헤더가 필요하다(ADR-0010). 없으면 403 `CSRF_REQUIRED` 다.
     devUserHeader:
       type: apiKey
       in: header
@@ -746,6 +763,11 @@ components:
           schema: { $ref: "../schemas/common/problem.json" }
     Unauthorized:
       description: 인증 필요/실패
+      content:
+        application/problem+json:
+          schema: { $ref: "../schemas/common/problem.json" }
+    Forbidden:
+      description: 권한/CSRF 확인 실패
       content:
         application/problem+json:
           schema: { $ref: "../schemas/common/problem.json" }

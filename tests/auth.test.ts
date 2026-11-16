@@ -173,6 +173,66 @@ test("쿠키 인증과 로그아웃(폐기)이 동작한다", async () => {
   }
 });
 
+test("Apple 로그인은 HttpOnly 세션 쿠키를 발급하고, 쿠키 변경 요청은 CSRF 헤더를 요구한다", async () => {
+  const verifier = new FakeIdentityVerifier();
+  verifier.issue("apple-csrf", { subject: "apple:sub-csrf", email: null });
+  const app = await startApp({ identity: verifier });
+
+  try {
+    const login = await app.call("POST", "/api/v1/auth/apple", {
+      identityToken: "apple-csrf",
+      displayName: "쿠키 보안 사용자",
+    });
+    assert.equal(login.status, 201);
+
+    const setCookie = login.headers.get("set-cookie") ?? "";
+    assert.match(setCookie, /gyeol_session=/);
+    assert.match(setCookie, /HttpOnly/i);
+    assert.match(setCookie, /SameSite=Lax/i);
+    assert.match(setCookie, /Path=\//);
+    assert.match(setCookie, /Max-Age=2592000/);
+    assert.doesNotMatch(setCookie, /Secure/i, "로컬(http)에서는 Secure 를 붙이지 않는다");
+
+    const token = login.body.session.token;
+    const cookie = `gyeol_session=${encodeURIComponent(token)}`;
+    const device = { serialNo: `GYL-CSRF-${uuidv7()}`, model: "gyeol-csrf" };
+
+    const blocked = await app.call("POST", "/api/v1/devices", device, { cookie });
+    assert.equal(blocked.status, 403);
+    assert.equal(blocked.body.code, "CSRF_REQUIRED");
+
+    const allowed = await app.call("POST", "/api/v1/devices", device, {
+      cookie,
+      "x-gyeol-csrf": "1",
+    });
+    assert.equal(allowed.status, 201);
+
+    // Bearer 는 CSRF 헤더 없이도 변경 요청을 보낼 수 있다.
+    const bearerAllowed = await app.call(
+      "POST",
+      "/api/v1/devices",
+      { serialNo: `GYL-BEARER-${uuidv7()}`, model: "gyeol-bearer" },
+      { authorization: `Bearer ${token}` },
+    );
+    assert.equal(bearerAllowed.status, 201);
+
+    const logoutBlocked = await app.call("POST", "/api/v1/auth/logout", undefined, { cookie });
+    assert.equal(logoutBlocked.status, 403);
+
+    const logout = await app.call("POST", "/api/v1/auth/logout", undefined, {
+      cookie,
+      "x-gyeol-csrf": "1",
+    });
+    assert.equal(logout.status, 204);
+    assert.match(logout.headers.get("set-cookie") ?? "", /Max-Age=0/);
+
+    const denied = await app.call("GET", "/api/v1/devices", undefined, { cookie });
+    assert.equal(denied.status, 401);
+  } finally {
+    await app.close();
+  }
+});
+
 test("세션은 30일 뒤 만료되고, 잘못된 토큰은 fail-closed 다", async () => {
   const clock = mutableClock();
   const verifier = new FakeIdentityVerifier();

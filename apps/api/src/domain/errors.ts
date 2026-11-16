@@ -30,6 +30,14 @@ export const authNotConfigured = () =>
     true,
   );
 
+export const csrfRequired = () =>
+  new AppError(
+    "CSRF_REQUIRED",
+    403,
+    "CSRF 확인이 필요합니다.",
+    "쿠키 인증으로 변경 요청을 보낼 때는 X-GYEOL-CSRF: 1 헤더가 필요합니다.",
+  );
+
 export const conflict = (code: string, message: string, detail?: string) =>
   new AppError(code, 409, message, detail);
 

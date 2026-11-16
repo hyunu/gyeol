@@ -19,8 +19,13 @@ export function sendJson(
   res.end(payload);
 }
 
-export function sendEmpty(res: ServerResponse, status: number, traceId: string): void {
-  res.writeHead(status, { "Cache-Control": "no-store", "X-Trace-Id": traceId });
+export function sendEmpty(
+  res: ServerResponse,
+  status: number,
+  traceId: string,
+  headers: Record<string, string> = {},
+): void {
+  res.writeHead(status, { "Cache-Control": "no-store", "X-Trace-Id": traceId, ...headers });
   res.end();
 }
 

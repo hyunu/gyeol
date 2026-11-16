@@ -41,10 +41,11 @@
 ## 구현 상태 (2026-11-14)
 
 - 완료: `0003_sessions.sql`, `POST /api/v1/auth/apple`, `POST /api/v1/auth/logout`,
-  Bearer/쿠키 세션 인증, Apple JWKS 검증기, 소유자 스코프 테스트
-- 남음: iOS `ASAuthorizationAppleIDProvider` 연동, 웹 로그인 UI(Service ID 필요),
-  토큰 보관(키체인), 로그인 화면
-- 검증: `tests/auth.test.ts` 6건, `tests/db/auth.test.ts` 3건
+  Bearer/쿠키 세션 인증, Apple JWKS 검증기, 소유자 스코프 테스트,
+  HttpOnly `gyeol_session` 쿠키 발급·삭제, 쿠키 변경 요청 CSRF(`X-GYEOL-CSRF: 1`) 보호
+- 남음: iOS `ASAuthorizationAppleIDProvider` 연동(로그인 UI 는 구현, 실토큰 E2E 대기),
+  웹 로그인 UI(Service ID 필요), 토큰 보관(키체인)
+- 검증: `tests/auth.test.ts` 7건, `tests/db/auth.test.ts` 3건
 
 ## 결과
 

@@ -315,6 +315,20 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 - 실기기에서 Sign in with Apple + BLE + 업로드/ACK/분석을 확인하기 전까지 W-24 는
   `PARTIAL(구현)` 이며 릴리스 차단 2번은 유지한다.
 
+## 2.16 웹 세션 쿠키·CSRF (W-19 서버, 2026-11-16)
+
+| # | 검증 | 근거 | 결과 |
+| --- | --- | --- | --- |
+| 1 | Apple 로그인 응답이 `HttpOnly; SameSite=Lax; Max-Age=2592000` 쿠키를 발급 | `tests/auth.test.ts` | 통과 |
+| 2 | 로컬(http)에서는 `Secure` 미부여, 운영에서는 부여 | 동일(로컬) / 코드 경로 | 통과 |
+| 3 | 쿠키 인증 변경 요청은 `X-GYEOL-CSRF: 1` 없으면 403 `CSRF_REQUIRED` | 동일 | 통과 |
+| 4 | Bearer 인증 변경 요청은 CSRF 헤더 없이 허용 | 동일 | 통과 |
+| 5 | 로그아웃이 세션을 폐기하고 `Max-Age=0` 쿠키로 브라우저 세션도 삭제 | 동일 | 통과 |
+| 6 | 계약(OpenAPI)에 Set-Cookie·403 응답·CSRF 설명 반영 | `npm run validate` | 통과 |
+| 7 | 전체 TS 검증 | `npm run check` (**56 tests**) | 통과 |
+
+- 웹 로그인 UI 는 Apple Service ID 발급 전까지 붙이지 않는다. 서버 계약은 준비됐다.
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |

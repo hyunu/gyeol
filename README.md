@@ -23,7 +23,7 @@
 | PostgreSQL `Store` 어댑터 | 완료 — `test:db` 14 tests |
 | 오브젝트 스토리지 | 완료 — 로컬 디스크 + S3/MinIO (`GYEOL_STORAGE`), `test:s3` 7 tests |
 | 관측성 | 완료 — 요청 JSON 로그, `X-Trace-Id`, `GET /metrics` (`docs/09-observability.md`) |
-| 세션 인증 | 완료(서버) — Apple JWKS, Bearer/쿠키 세션, 소유자 스코프. iOS/웹 로그인 UI는 대기 |
+| 세션 인증 | 완료(서버) — Apple JWKS, Bearer/쿠키 세션, HttpOnly 쿠키 발급·CSRF 보호, 소유자 스코프. 웹 로그인 UI는 Service ID 대기 |
 | BLE 프로토콜 | 완료 — GATT 프레임·ACK·재전송·이어받기 계약 + 시뮬레이터 (`docs/12-ble-protocol.md`) |
 | AI provider 계약 | 완료(계약) — HTTP 파이프라인·mock 계약 테스트 (`docs/13-ai-provider-contract.md`). 실제 vendor는 ENV-05 |
 | ESP32-S3 펌웨어 | 개발 변형 — PDM 녹음·BLE 전송·중단 재개 SHA 일치 (`firmware/esp32s3`) |
@@ -140,8 +140,10 @@ docs/           분석·요구사항·설계·검증 기록, ADR
 - 분석은 **비동기 작업 큐**다(ADR-0007). `POST .../analyze` 는 202 로 작업을 만들고,
   `GET /api/v1/analysis-jobs/{jobId}` 로 폴링한다. 워커는 API 프로세스 안에서 돈다.
 - `X-User-Id` 는 **로컬 전용**이며 `GYEOL_ENV != local` 이면 401(ADR-0003).
-- Apple 로그인 세션은 서버에 구현됐다(Bearer/쿠키). iOS·웹 로그인 UI 는 Apple 설정 후 연결한다.
+- Apple 로그인 세션은 서버에 구현됐다(Bearer/쿠키). 웹 로그인 UI 는 Apple Service ID 설정 후 연결한다.
   `APPLE_CLIENT_IDS`(bundle/Service ID, 쉼표 구분)가 없으면 `/auth/apple` 은 503 이다.
+- 웹 세션 쿠키(`gyeol_session`)는 `HttpOnly; SameSite=Lax` 이고 운영에서는 `Secure` 다.
+  쿠키로 `POST`·`PUT`·`PATCH`·`DELETE` 를 보낼 때는 `X-GYEOL-CSRF: 1` 헤더가 필요하다.
 - 오브젝트 스토리지는 **로컬 디스크**가 기본이고 `GYEOL_STORAGE=s3` 로 S3/MinIO 를 쓴다.
   S3 경유 업로드는 커밋 시 전송량이 2배다(ADR-0008).
 

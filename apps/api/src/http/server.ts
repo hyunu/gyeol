@@ -17,7 +17,7 @@ import { createIdentityVerifierFromEnv } from "../adapters/identity/apple.ts";
 import { methodNotAllowed, notFound, validationFailed } from "../domain/errors.ts";
 import type { ActionItemStatus } from "../domain/types.ts";
 import type { ObjectStorage, Store } from "../ports/store.ts";
-import { DEMO_USER_ID, resolveAuth } from "./auth.ts";
+import { DEMO_USER_ID, clearedSessionCookie, resolveAuth, sessionCookie } from "./auth.ts";
 import { sendEmpty, sendJson, sendProblem, sendText, readBinaryBody, readJsonBody } from "./respond.ts";
 import { consoleLogger, Metrics, type Logger, type LogEntry } from "../observability.ts";
 import * as dto from "./dto.ts";
@@ -212,12 +212,25 @@ export function createApp(options: AppOptions = {}): http.Server {
       displayName: readString(body, "displayName", { max: 80 }),
       userAgent: (req.headers["user-agent"] as string | undefined) ?? null,
     });
-    return { status: 201, body: { session: dto.sessionDto(issued) } };
+    const maxAgeSeconds = Math.max(
+      0,
+      Math.floor((issued.session.expiresAt.getTime() - deps.clock.now().getTime()) / 1000),
+    );
+    return {
+      status: 201,
+      body: { session: dto.sessionDto(issued) },
+      headers: {
+        "set-cookie": sessionCookie(issued.token, { secure: env !== "local", maxAgeSeconds }),
+      },
+    };
   });
 
   route("POST", "/api/v1/auth/logout", true, async ({ sessionId, deps }) => {
     await authUseCases.signOut(deps, sessionId);
-    return { status: 204 };
+    return {
+      status: 204,
+      headers: { "set-cookie": clearedSessionCookie({ secure: env !== "local" }) },
+    };
   });
 
   route("DELETE", "/api/v1/me", true, async ({ userId, traceId, deps }) => {
@@ -538,7 +551,7 @@ export function createApp(options: AppOptions = {}): http.Server {
       const result = await matched.handle({
         req, res, url, params, traceId, userId, sessionId, deps,
       });
-      if (result.status === 204) sendEmpty(res, 204, traceId);
+      if (result.status === 204) sendEmpty(res, 204, traceId, result.headers ?? {});
       else if (typeof result.body === "string") {
         sendText(res, result.status, result.body, "text/plain; version=0.0.4; charset=utf-8", traceId);
       } else sendJson(res, result.status, result.body ?? {}, traceId, result.headers ?? {});
