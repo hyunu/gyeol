@@ -374,6 +374,12 @@ struct DeviceView: View {
                                         .font(.caption2)
                                         .foregroundStyle(GyeolTheme.ink3)
                                 }
+                                if let conversationId = item.conversationId {
+                                    NavigationLink("대화 보기") {
+                                        ConversationDetailView(id: conversationId, session: session)
+                                    }
+                                    .font(.caption)
+                                }
                                 if let error = item.error {
                                     Text(error)
                                         .font(.caption2)
@@ -418,14 +424,18 @@ struct DeviceView: View {
         case .uploading: return "업로드 중"
         case .uploaded: return "검증됨 (ACK 전)"
         case .acked: return "ACK 완료"
-        case .analyzing: return "분석 요청됨"
+        case .analyzing: return "분석 중"
+        case .analyzed: return "분석 완료"
+        case .analysisFailed: return "분석 실패"
         case .failed: return "실패"
         }
     }
 
     private func phaseColor(_ phase: UploadPhase) -> Color {
         switch phase {
-        case .failed:
+        case .failed, .analysisFailed:
+            return GyeolTheme.accent
+        case .analyzed:
             return GyeolTheme.accent
         case .analyzing, .acked:
             return GyeolTheme.ink2

@@ -14,6 +14,7 @@ final class UploadController: ObservableObject {
         var uploadedBytes: Int
         var recordingId: String?
         var analysisJobId: String?
+        var conversationId: String?
         var error: String?
 
         var id: String { clientRecordingId }
@@ -36,6 +37,10 @@ final class UploadController: ObservableObject {
 
     private static let defaultsKey = "gyeol.upload.checkpoints.v1"
     private static let maxChunkBytes = 256 * 1024
+    /// 분석 작업 폴링 간격(1초)과 한 번에 기다리는 최대 횟수.
+    /// 서버 워커가 기본 1초 간격이므로 10회면 약 10초까지 결과를 기다린다.
+    private static let analysisPollInterval: UInt64 = 1_000_000_000
+    private static let maxAnalysisPolls = 10
 
     init() {
         checkpoints = Self.loadCheckpoints()
@@ -61,6 +66,7 @@ final class UploadController: ObservableObject {
                 uploadedBytes: checkpoint?.uploadedBytes ?? 0,
                 recordingId: checkpoint?.recordingId,
                 analysisJobId: checkpoint?.analysisJobId,
+                conversationId: checkpoint?.conversationId,
                 error: itemErrors[id]
             )
         }
@@ -86,8 +92,9 @@ final class UploadController: ObservableObject {
 
         refresh(files: files)
         for file in files {
+            // 분석 단계 이후는 다시 올리지 않는다. `.analyzing` 은 아래에서 폴링한다.
             if let checkpoint = checkpoints[file.clientRecordingId],
-               checkpoint.phase == .analyzing || checkpoint.phase == .failed {
+               [.analyzing, .analyzed, .analysisFailed, .failed].contains(checkpoint.phase) {
                 continue
             }
             do {
@@ -98,7 +105,67 @@ final class UploadController: ObservableObject {
             }
             refresh(files: files)
         }
+
+        await pollPendingAnalyses(token: session.token)
         refresh(files: files)
+    }
+
+    // ------------------------------------------------------------ analysis
+
+    /// `/analyze` 를 등록한 파일의 작업 상태를 확인해 성공/실패를 반영한다.
+    ///
+    /// 아직 진행 중이면 `.analyzing` 으로 남겨 두고 다음 호출에서 이어서 확인한다.
+    /// 앱을 재시작해도 `.analyzing` 체크포인트가 저장돼 있어 자동으로 재개된다.
+    private func pollPendingAnalyses(token: String) async {
+        let pending = checkpoints.values
+            .filter { $0.phase == .analyzing }
+            .sorted { $0.updatedAt < $1.updatedAt }
+            .map(\.clientRecordingId)
+
+        for id in pending {
+            await pollAnalysis(id, token: token)
+        }
+    }
+
+    private func pollAnalysis(_ id: String, token: String) async {
+        guard var checkpoint = checkpoints[id], checkpoint.phase == .analyzing else {
+            return
+        }
+        guard let jobId = checkpoint.analysisJobId else {
+            itemErrors[id] = UploadError.analysisJobMissing.localizedDescription
+            return
+        }
+
+        do {
+            for attempt in 0..<Self.maxAnalysisPolls {
+                let job = try await api.getAnalysisJob(id: jobId, token: token)
+                switch UploadPlanner.analysisState(job.status) {
+                case .succeeded:
+                    checkpoint.phase = .analyzed
+                    checkpoint.conversationId = job.conversationId
+                    save(checkpoint)
+                    itemErrors[id] = job.conversationId == nil
+                        ? UploadError.missingConversation.localizedDescription
+                        : nil
+                    return
+                case .failed:
+                    checkpoint.phase = .analysisFailed
+                    save(checkpoint)
+                    itemErrors[id] = UploadError.analysisFailed.localizedDescription
+                    return
+                case .pending:
+                    if attempt + 1 < Self.maxAnalysisPolls {
+                        try await Task.sleep(nanoseconds: Self.analysisPollInterval)
+                    }
+                }
+            }
+            // 아직 진행 중이다. 상태를 유지해 다음 호출에서 다시 확인한다.
+            itemErrors[id] = UploadError.analysisTimedOut.localizedDescription
+        } catch is CancellationError {
+            return
+        } catch {
+            itemErrors[id] = error.localizedDescription
+        }
     }
 
     // -------------------------------------------------------------- device
@@ -160,7 +227,7 @@ final class UploadController: ObservableObject {
         }
 
         switch checkpoint.phase {
-        case .analyzing, .failed:
+        case .analyzing, .analyzed, .analysisFailed, .failed:
             save(checkpoint)
             return
         case .acked:
@@ -331,6 +398,7 @@ final class UploadController: ObservableObject {
             items[index].uploadedBytes = next.uploadedBytes
             items[index].recordingId = next.recordingId
             items[index].analysisJobId = next.analysisJobId
+            items[index].conversationId = next.conversationId
         }
     }
 
@@ -356,6 +424,10 @@ enum UploadError: LocalizedError {
     case invalidWav
     case localFileTruncated
     case integrityFailed
+    case analysisJobMissing
+    case analysisFailed
+    case analysisTimedOut
+    case missingConversation
 
     var errorDescription: String? {
         switch self {
@@ -369,6 +441,14 @@ enum UploadError: LocalizedError {
             return "로컬 파일이 예상보다 짧습니다."
         case .integrityFailed:
             return "서버 무결성 검증에 실패했습니다. 원본을 다시 받아야 합니다."
+        case .analysisJobMissing:
+            return "분석 작업 ID가 없습니다. 다시 분석을 요청해야 합니다."
+        case .analysisFailed:
+            return "서버 분석이 실패했습니다. 서버 로그를 확인해 주세요."
+        case .analysisTimedOut:
+            return "분석이 아직 진행 중입니다. 잠시 후 다시 확인해 주세요."
+        case .missingConversation:
+            return "분석은 끝났지만 대화 ID를 받지 못했습니다."
         }
     }
 }

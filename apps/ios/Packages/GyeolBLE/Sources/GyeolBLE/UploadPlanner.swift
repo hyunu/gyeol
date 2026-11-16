@@ -35,6 +35,24 @@ public enum UploadPlanner {
         guard !digits.isEmpty else { return nil }
         return Int(digits)
     }
+
+    /// `/analyze` 작업 상태를 화면·상태 머신이 쓰는 세 가지 결과로 접는다.
+    public enum AnalysisState: Equatable, Sendable {
+        case pending
+        case succeeded
+        case failed
+    }
+
+    public static func analysisState(_ status: String) -> AnalysisState {
+        switch status {
+        case "succeeded":
+            return .succeeded
+        case "failed":
+            return .failed
+        default:
+            return .pending
+        }
+    }
 }
 
 /// 파일 하나의 서버 업로드 진행 상태. 앱 재시작 후 이어 보내기 위해 저장한다.
@@ -47,8 +65,12 @@ public enum UploadPhase: String, Codable, Sendable {
     case uploaded
     /// `/ack` 완료. 원본 삭제 조건(5) 충족.
     case acked
-    /// `/analyze` 등록 완료.
+    /// `/analyze` 등록 완료. 작업 상태를 폴링하는 중.
     case analyzing
+    /// 분석 성공. `conversationId` 로 대화를 열 수 있다.
+    case analyzed
+    /// 분석 작업이 실패했다.
+    case analysisFailed
     /// 복구할 수 없는 오류(무결성 실패 등).
     case failed
 }
@@ -69,6 +91,7 @@ public struct UploadCheckpoint: Codable, Equatable, Sendable {
     public var uploadedBytes: Int
     public var phase: UploadPhase
     public var analysisJobId: String?
+    public var conversationId: String?
     public var updatedAt: Date
 
     public init(
@@ -87,6 +110,7 @@ public struct UploadCheckpoint: Codable, Equatable, Sendable {
         uploadedBytes: Int = 0,
         phase: UploadPhase = .ready,
         analysisJobId: String? = nil,
+        conversationId: String? = nil,
         updatedAt: Date = Date()
     ) {
         self.clientRecordingId = clientRecordingId
@@ -104,6 +128,7 @@ public struct UploadCheckpoint: Codable, Equatable, Sendable {
         self.uploadedBytes = uploadedBytes
         self.phase = phase
         self.analysisJobId = analysisJobId
+        self.conversationId = conversationId
         self.updatedAt = updatedAt
     }
 

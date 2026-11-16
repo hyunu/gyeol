@@ -27,6 +27,39 @@ final class UploadPlannerTests: XCTestCase {
         XCTAssertNil(UploadPlanner.recoverOffset(fromProblemDetail: "no offset here"))
     }
 
+    func testAnalysisStateMapping() {
+        XCTAssertEqual(UploadPlanner.analysisState("succeeded"), .succeeded)
+        XCTAssertEqual(UploadPlanner.analysisState("failed"), .failed)
+        XCTAssertEqual(UploadPlanner.analysisState("queued"), .pending)
+        XCTAssertEqual(UploadPlanner.analysisState("running"), .pending)
+        XCTAssertEqual(UploadPlanner.analysisState("unknown"), .pending)
+    }
+
+    func testAnalysisPhasesRoundTrip() throws {
+        XCTAssertEqual(UploadPhase(rawValue: "analyzed"), .analyzed)
+        XCTAssertEqual(UploadPhase(rawValue: "analysisFailed"), .analysisFailed)
+
+        let checkpoint = UploadCheckpoint(
+            clientRecordingId: "rec:2",
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            durationMs: 1000,
+            codec: "wav_pcm_s16le",
+            sampleRateHz: 16000,
+            channels: 1,
+            byteSize: 100,
+            sha256: String(repeating: "b", count: 64),
+            phase: .analyzed,
+            analysisJobId: "job-1",
+            conversationId: "conversation-1"
+        )
+        let decoded = try JSONDecoder().decode(
+            UploadCheckpoint.self,
+            from: try JSONEncoder().encode(checkpoint)
+        )
+        XCTAssertEqual(decoded.phase, .analyzed)
+        XCTAssertEqual(decoded.conversationId, "conversation-1")
+    }
+
     func testCheckpointRoundTripAndProgress() throws {
         let started = Date(timeIntervalSince1970: 1_700_000_000)
         let checkpoint = UploadCheckpoint(
