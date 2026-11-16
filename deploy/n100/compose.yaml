@@ -57,6 +57,20 @@ services:
     restart: unless-stopped
     mem_limit: 128m
 
+  algo-verify:
+    build:
+      context: ../..
+      dockerfile: deploy/n100/algo-verify/Dockerfile
+    ports:
+      - "18081:80"
+    volumes:
+      - ./.htpasswd:/etc/nginx/.htpasswd:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 128m
+
 volumes:
   gyeol-pgdata:
   gyeol-storage:

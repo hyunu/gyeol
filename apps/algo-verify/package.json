@@ -1,0 +1,23 @@
+{
+  "name": "gyeol-algo-verify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "모바일/서버 음성 분석 알고리즘 검증용 병렬 웹앱 — 샘플 선택, 텍스트 추출, 요약·화자분리 결과 확인",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.8"
+  }
+}

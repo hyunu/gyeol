@@ -15,8 +15,17 @@ endpoints:
     host_port: 18080
     container: web
     container_port: 80
+  - name: algo-verify
+    type: http
+    exposure: host
+    host_port: 18081
+    container: algo-verify
+    container_port: 80
 containers:
   - name: web
+    role: frontend
+    required: true
+  - name: algo-verify
     role: frontend
     required: true
   - name: api
@@ -26,7 +35,7 @@ containers:
     role: database
     required: true
 resources:
-  memory_limit_mb: 1024
+  memory_limit_mb: 1152
 volumes:
   - name: gyeol-pgdata
     purpose: PostgreSQL 데이터
