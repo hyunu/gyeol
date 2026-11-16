@@ -385,7 +385,7 @@ export function createApp(options: AppOptions = {}): http.Server {
     async ({ req, url, params, userId, deps }) => {
       const offset = queryInt(url, "offset");
       if (offset === undefined) throw validationFailed("offset 쿼리 파라미터가 필요합니다.");
-      const chunk = await readBinaryBody(req, 1024 * 1024);
+      const chunk = await readBinaryBody(req, 4 * 1024 * 1024);
       const result = await recordingUseCases.appendChunk(
         deps, userId, params.recordingId, params.sessionId, offset, chunk,
       );

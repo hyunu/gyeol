@@ -30,7 +30,7 @@ export interface Deps {
 export const defaultDeps = (partial: Partial<Deps> & Pick<Deps, "store" | "storage" | "ai">): Deps => ({
   clock: { now: () => new Date() },
   speakerThreshold: { provider: "fake", model: "fake-v1", threshold: 0.8, margin: 0.05 },
-  upload: { chunkSizeBytes: 256 * 1024, sessionTtlMs: 24 * 60 * 60 * 1000 },
+  upload: { chunkSizeBytes: 2 * 1024 * 1024, sessionTtlMs: 24 * 60 * 60 * 1000 },
   analysis: {
     maxAttempts: 3,
     timeoutMs: 5 * 60 * 1000,

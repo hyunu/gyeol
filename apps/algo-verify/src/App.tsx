@@ -81,12 +81,13 @@ export function App() {
       let recordingId = created.recording.id;
       let sessionId = created.uploadSession.id;
       let offset = created.uploadSession.receivedBytes || 0;
-      const chunkSize = Math.max(1, Math.min(256 * 1024, created.uploadSession.chunkSizeBytes || 256 * 1024));
+      // 서버 세션 한도 내에서 큰 청크로 업로드해 왕복 횟수(지연)를 줄인다.
+      const chunkSize = Math.max(1, Math.min(2 * 1024 * 1024, created.uploadSession.chunkSizeBytes || 2 * 1024 * 1024));
 
       setRun({ phase: "uploading", message: "오디오 청크 업로드 중…", progress: offset / bytes.byteLength });
       while (offset < bytes.byteLength) {
         const end = Math.min(bytes.byteLength, offset + chunkSize);
-        const chunk = bytes.slice(offset, end);
+        const chunk = bytes.subarray(offset, end);
         const prog = await api.putChunk(recordingId, sessionId, offset, chunk);
         offset = prog.uploadSession.receivedBytes;
         if (prog.recording.status === "integrity_failed" || prog.uploadSession.status === "aborted") {
@@ -106,14 +107,16 @@ export function App() {
 
       setRun({ phase: "polling", message: "분석 결과 대기 중(텍스트 추출·요약·화자분리)…", job });
       let finalJob = job;
-      for (let i = 0; i < 90; i++) {
+      // 워커가 빠르게 처리하는 경우를 위해 짧은 간격으로 폴링 후 점진적으로 늘린다.
+      for (let i = 0; i < 120; i++) {
         finalJob = await api.getJob(job.id);
         if (finalJob.status === "succeeded") break;
         if (finalJob.status === "failed") {
           throw new Error(finalJob.lastError || "분석 작업이 실패했습니다.");
         }
-        setRun({ phase: "polling", message: `분석 중… (${i + 1}s, 상태: ${finalJob.status})`, job: finalJob });
-        await sleep(1000);
+        const waitMs = i < 10 ? 300 : i < 30 ? 700 : 1000;
+        setRun({ phase: "polling", message: `분석 중… (상태: ${finalJob.status})`, job: finalJob });
+        await sleep(waitMs);
       }
       if (finalJob.status !== "succeeded" || !finalJob.conversationId) {
         throw new Error(finalJob.lastError || "분석이 시간 내 완료되지 않았습니다.");
