@@ -372,6 +372,23 @@ Homebrew 로 PostgreSQL 17(+pgvector)·MinIO·PlatformIO 를 설치하고, 로�
 - Docker 대신 로컬(Homebrew) 서비스 사용. 릴리스 판정은 여전히 **NO-GO** 이며 실물·실
   provider·배포 자격 증명 차단은 `docs/15-release-checklist.md` 를 따른다.
 
+## 2.19 성능 기준선 10k 재확인 (W-28, 2026-11-16)
+
+로컬 Homebrew PostgreSQL 17(+pgvector, 마이그레이션 `0001~0005`)에서
+`BENCH_CONVERSATIONS=10000 BENCH_DURATION_MS=3000` 로 재측정했다(루프백·단일 프로세스·Fake AI).
+
+| 시나리오 | RPS | p50 | p95 | 오류 |
+| --- | ---: | ---: | ---: | ---: |
+| 대화 목록 | 931.0 | 21.0ms | 27.7ms | 0 |
+| 대화 상세 | 3,099.7 | 6.2ms | 8.0ms | 0 |
+| 키워드 검색(광범위) | 159.0 | 128.4ms | 165.5ms | 0 |
+| 키워드 검색(선택적) | 204.3 | 99.8ms | 127.3ms | 0 |
+| 기기 목록 | 6,841.0 | 2.7ms | 4.7ms | 0 |
+
+- 검색 p95가 잠정 목표(≤250ms) 범위 내임을 현재 코드 기준으로 재확인했다.
+- 환경 차이로 2026-11-14 Docker 측정과 절대값 비교는 부적절하다. 실제 provider 지연,
+  TLS·리버스 프록시·다중 인스턴스 측정은 잔여 항목(`docs/15-release-checklist.md` #5, #6).
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |
