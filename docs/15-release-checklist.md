@@ -67,7 +67,7 @@ Homebrew 로 PostgreSQL 17(+pgvector)·MinIO·PlatformIO 를 설치하고, 로�
 
 - [x] `make acceptance` 8/8 통과 (2026-11-16, 로컬 PostgreSQL·MinIO·PlatformIO) — CI/Docker 재현 확인 권장 (`make acceptance-docker` 로 compose 기본값 실행 가능)
 - [x] 마이그레이션 `0001~0005` 빈 DB 적용 + `db:checks` — 로컬 PostgreSQL 17 빈 DB에서 재현 확인 (2026-11-16). CI/Docker 환경 동일 확인 권장
-- [ ] 백업/복구 리허설 (`docs/11-backup-restore.md`) 최신 백업으로 재실행
+- [x] 백업/복구 리허설 (`docs/11-backup-restore.md`) 최신 백업으로 재실행 — 2026-11-16 로컬 PostgreSQL 17, `PG_LOCAL=1` 백업·복구 리허설 통과(18 테이블, 마이그레이션 5건 일치). 운영/S3 복구 리허설은 ENV-08 잔여
 - [ ] `npm run purge` 가 기대 건수만 삭제하는지 확인
 - [ ] `/healthz` 의 `db`·`storage` = `ok`
 - [ ] `/metrics` 수집·알림 연결 (`docs/09-observability.md`)

@@ -48,6 +48,9 @@ pg_dump -Fc --no-owner --no-privileges -d "$DATABASE_URL" -f "gyeol-$(date +%Y%m
 ```bash
 DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol \
 npm run db:restore:rehearsal -- .artifacts/backups/gyeol-....dump
+
+# Docker 없이 로컬 pg_restore/psql 사용
+PG_LOCAL=1 DATABASE_URL=... npm run db:restore:rehearsal -- .artifacts/backups/gyeol-....dump
 ```
 
 검사 항목:
@@ -70,6 +73,23 @@ npm run db:restore:rehearsal -- .artifacts/backups/gyeol-....dump
 | 확장 | 일치 |
 | 소요 | 3.4s |
 | 원본 영향 | 없음 |
+
+### 2026-11-16 리허설 재실행 (로컬 도구)
+
+로컬(Homebrew) PostgreSQL 17, `PG_LOCAL=1` 로 백업·복구 리허설 스크립트를 실행했다.
+
+| 항목 | 결과 |
+| --- | --- |
+| 백업 | `pg_dump -Fc`, 0.06 MiB |
+| 복구 | `pg_restore --no-owner --no-privileges` (`gyeol_rehearsal`) |
+| 테이블 | 18/18, 행 수 전부 일치 |
+| 마이그레이션 | 5건(`0001`~`0005`), 체크섬 일치 |
+| 확장 | 일치 (`citext`, `vector` 포함) |
+| 소요 | 1.8s |
+| 원본 영향 | 없음 |
+
+> Docker 기반 리허설과 별개로, 로컬 pg 도구 경로도 검증했다. 운영 버킷/오브젝트 스토리지
+> 복구 리허설은 `ENV-08` 로 남는다.
 
 ## 4. 실제 복구 절차 (운영)
 

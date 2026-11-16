@@ -5,6 +5,9 @@
  * 원본 DB 는 건드리지 않고, 별도 DB(<db>_rehearsal)에 복구한 뒤
  * 테이블 목록·행 수·마이그레이션 체크섬이 같은지 비교한다.
  *
+ * 기본은 docker compose 컨테이너(gyeol-postgres) 사용. Docker 불가 또는
+ * PG_LOCAL=1 이면 로컬 pg_restore/psql/dropdb/createdb 를 사용한다.
+ *
  * 사용:
  *   DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol \
  *   npm run db:restore:rehearsal -- .artifacts/backups/gyeol-....dump
@@ -17,7 +20,7 @@ import path from "node:path";
 
 const container = process.env.PG_CONTAINER ?? "gyeol-postgres";
 const keep = process.argv.includes("--keep");
-const file = process.argv.find((arg) => arg.endsWith(".dump"));
+const file = process.argv.find((arg, i) => i >= 2 && arg.endsWith(".dump"));
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -29,8 +32,9 @@ if (!file) {
   process.exit(1);
 }
 
-const source = parseDatabase(url);
-const user = decodeURIComponent(new URL(url).username) || "postgres";
+const parsed = new URL(url);
+const source = parseDatabase(parsed);
+const user = decodeURIComponent(parsed.username) || "postgres";
 const target = process.env.REHEARSAL_DB ?? `${source}_rehearsal`;
 
 if (target === source || !target.endsWith("_rehearsal")) {
@@ -51,22 +55,21 @@ const startedAt = Date.now();
 
 try {
   console.log(`· 리허설 DB 재생성: ${target}`);
-  await docker(["exec", container, "dropdb", "-U", user, "--if-exists", target]);
-  await docker(["exec", container, "createdb", "-U", user, target]);
+  await dropDb(target);
+  await createDb(target);
 
   console.log(`· 복구: ${path.basename(file)} (${(backup.length / 1024 / 1024).toFixed(2)} MiB)`);
-  await docker(
-    ["exec", "-i", container, "pg_restore", "-U", user, "-d", target, "--no-owner", "--no-privileges"],
-    backup,
-  );
+  await restoreDb(target, backup);
 
-  const sourceState = await snapshot(source, user);
-  const targetState = await snapshot(target, user);
+  const sourceState = await snapshot(source);
+  const targetState = await snapshot(target);
 
   console.log("\n| 테이블 | 원본 | 복구 |");
   console.log("| --- | ---: | ---: |");
   for (const table of sourceState.tables) {
-    console.log(`| ${table.name} | ${table.rows} | ${targetState.tables.find((t) => t.name === table.name)?.rows ?? "-"} |`);
+    console.log(
+      `| ${table.name} | ${table.rows} | ${targetState.tables.find((t) => t.name === table.name)?.rows ?? "-"} |`,
+    );
   }
 
   const problems = [];
@@ -94,7 +97,7 @@ try {
   } else {
     const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(
-      `\n✔ 복구 리허설 통과 — ${sourceState.tables.length} 테이블, 마이그레이션 ${sourceState.migrations.split("\n").length}건, ${seconds}s`,
+      `\n✔ 복구 리허설 통과 — ${sourceState.tables.length} 테이블, 마이그레이션 ${sourceState.migrations.split("\n").filter(Boolean).length}건, ${seconds}s`,
     );
     console.log("  원본 DB 는 변경하지 않았습니다.");
   }
@@ -103,56 +106,108 @@ try {
   process.exitCode = 1;
 } finally {
   if (!keep) {
-    await docker(["exec", container, "dropdb", "-U", user, "--if-exists", target]).catch(() => undefined);
+    await dropDb(target).catch(() => undefined);
     console.log(`· 리허설 DB 정리: ${target}`);
   } else {
     console.log(`· 리허설 DB 유지: ${target}`);
   }
 }
 
-async function snapshot(database, user) {
-  const tables = await psql(
-    user,
+async function snapshot(database) {
+  const tableList = await psql(
     database,
     `SELECT table_name FROM information_schema.tables
      WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name`,
   ).then((out) => out.trim().split("\n").filter(Boolean));
 
-  const counts = [];
-  for (const name of tables) {
-    const value = await psql(user, database, `SELECT count(*) FROM "${name}"`);
-    counts.push({ name, rows: Number(value.trim()) });
+  const tables = [];
+  for (const name of tableList) {
+    const value = await psql(database, `SELECT count(*) FROM "${name}"`);
+    tables.push({ name, rows: Number(value.trim()) });
   }
 
   const migrations = await psql(
-    user,
     database,
     `SELECT filename || ':' || checksum FROM schema_migrations ORDER BY filename`,
   ).then((out) => out.trim());
 
   const extensions = await psql(
-    user,
     database,
     `SELECT string_agg(extname, ',' ORDER BY extname) FROM pg_extension`,
   ).then((out) => out.trim());
 
-  return { tables: counts, migrations, extensions };
+  return { tables, migrations, extensions };
 }
 
-function psql(user, database, sql) {
-  return docker(["exec", container, "psql", "-U", user, "-d", database, "-At", "-c", sql]);
-}
-
-function parseDatabase(connectionString) {
-  const name = new URL(connectionString).pathname.replace(/^\//, "");
+function parseDatabase(urlObj) {
+  const name = urlObj.pathname.replace(/^\//, "");
   if (!name) throw new Error("DATABASE_URL 에 데이터베이스 이름이 없습니다.");
   return name;
 }
 
-function docker(args, input) {
+function connArgs(database) {
+  const host = parsed.hostname || "localhost";
+  const port = parsed.port || "5432";
+  return ["-h", host, "-p", port, "-U", user, "-d", database];
+}
+
+async function dropDb(database) {
+  await execPg(["dropdb", "-h", parsed.hostname || "localhost", "-p", parsed.port || "5432", "-U", user, "--if-exists", database]);
+}
+
+async function createDb(database) {
+  await execPg(["createdb", "-h", parsed.hostname || "localhost", "-p", parsed.port || "5432", "-U", user, database]);
+}
+
+async function restoreDb(database, data) {
+  await execPg(
+    ["pg_restore", "-h", parsed.hostname || "localhost", "-p", parsed.port || "5432", "-U", user, "-d", database, "--no-owner", "--no-privileges"],
+    data,
+  );
+}
+
+async function psql(database, sql) {
+  return execPg(["psql", ...connArgs(database), "-At", "-c", sql]);
+}
+
+async function execPg(localCmd, input = null) {
+  if (process.env.PG_LOCAL === "1") return run(localCmd, input);
+  try {
+    if (localCmd[0] === "psql") {
+      return await dockerExec([localCmd[0], "-U", user, "-d", localCmd[localCmd.indexOf("-d") + 1], "-At", "-c", localCmd[localCmd.indexOf("-c") + 1]], input);
+    }
+    if (localCmd[0] === "dropdb") {
+      const db = localCmd[localCmd.length - 1];
+      return await dockerExec([localCmd[0], "-U", user, "--if-exists", db], input);
+    }
+    if (localCmd[0] === "createdb") {
+      const db = localCmd[localCmd.length - 1];
+      return await dockerExec([localCmd[0], "-U", user, db], input);
+    }
+    if (localCmd[0] === "pg_restore") {
+      const db = localCmd[localCmd.indexOf("-d") + 1];
+      return await dockerExec([localCmd[0], "-U", user, "-d", db, "--no-owner", "--no-privileges"], input);
+    }
+    throw new Error(`지원하지 않는 명령: ${localCmd[0]}`);
+  } catch (err) {
+    try {
+      return await run(localCmd, input);
+    } catch {
+      throw err;
+    }
+  }
+}
+
+function dockerExec(args, input = null) {
+  return run(["docker", "exec", ...(input ? ["-i"] : []), container, ...args], input);
+}
+
+function run(cmd, input = null) {
   return new Promise((resolve, reject) => {
-    const child = spawn("docker", args, {
+    const [bin, ...args] = cmd;
+    const child = spawn(bin, args, {
       stdio: [input ? "pipe" : "ignore", "pipe", "pipe"],
+      env: { ...process.env, PGPASSWORD: decodeURIComponent(parsed.password || "") },
     });
     const out = [];
     const err = [];
@@ -162,7 +217,7 @@ function docker(args, input) {
     child.on("close", (code) => {
       if (code !== 0) {
         const message = Buffer.concat(err).toString("utf8").trim();
-        reject(new Error(message || `docker ${args.join(" ")} 실패 (exit ${code})`));
+        reject(new Error(message || `${cmd.join(" ")} 실패 (exit ${code})`));
       } else {
         resolve(Buffer.concat(out).toString("utf8"));
       }
