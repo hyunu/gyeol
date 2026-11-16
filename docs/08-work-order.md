@@ -86,10 +86,15 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 ## 4. 지금 위치
 
 - 완료: Track 0, Track 1, W-10~W-18, W-20, W-22(ESP32-S3), W-25(삭제·내보내기·감사), W-26, W-27
-- 부분: W-19 — 서버 세션·iOS 로그인 UI(실기기 대기), W-21 — PDM/LittleFS(VAD·SD·전원차단 대기), W-23 — iOS 빌드·수신기(실기기 대기), W-24 — 업로드 상태 머신(실기기 E2E 대기)
+- 부분:
+  - W-19 — 세션·JWKS·소유자 스코프·HttpOnly 쿠키·CSRF·웹 Apple 로그인 UI 완료, 실 Service ID/실토큰 E2E 대기
+  - W-21 — PDM·LittleFS·BLE 전송 완료, microSD/VAD 실측 대기
+  - W-23 — 수신기·빌드 완료, iPhone E2E 대기
+  - W-24 — 업로드·ACK·분석 폴링 완료, iPhone E2E 대기
+  - W-28 — 120/10k 로컬 측정 완료, 실 provider·TLS/프록시 측정 대기
 - 배포: n100-service-hub `gyeol` 서비스 배포 완료(web 18080, Basic Auth). `docs/16-n100-deployment.md`
 - 실기기: ESP32-S3 개발 보드로 BLE 전송·재개까지 검증. nRF52840 전환 시 재검증 필요
-- 다음(차단): W-21 실물(microSD/VAD 튜닝) · W-24 iPhone E2E · W-28 실 provider 재측정
+- 다음(차단): W-19 Apple 실토큰 · W-21 nRF52840 Sense/microSD · W-24 iPhone E2E · W-28 실 provider·TLS 측정
 - 릴리스: **NO-GO** — `docs/15-release-checklist.md` 의 차단 목록 해소 후 재판정
 
 ## 5. 하지 말아야 할 순서

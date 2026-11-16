@@ -161,8 +161,8 @@ GYEOL_STORE=postgres DATABASE_URL=... npm run purge   # 30일 경과 원본·계
 
 작업 순서와 완료 조건은 [`docs/08-work-order.md`](docs/08-work-order.md) 를 따른다.
 
-1. iOS 실기기 E2E (W-24) · VAD/microSD (W-21)
-2. 실제 AI provider 연결 (ENV-05) · 부하/지연 측정 (W-28)
-3. nRF52840 Sense·microSD·VAD 실측 (HW-PENDING)
-4. Apple 실 토큰·실기기 E2E·배포 인증서, 실제 AI provider
-5. 차단 목록 해소 후 `make acceptance` 재실행 → 릴리스 판정
+1. Apple Service ID·실토큰 E2E (W-19) · iPhone 실기기 E2E (W-24)
+2. nRF52840 Sense·microSD·VAD 실측 (W-21, HW-PENDING)
+3. 실제 AI provider 연결 (ENV-05) · 10k TLS/프록시 측정 (W-28)
+4. 배포 인증서·법무 검토 등 나머지 차단 목록 해소
+5. `make acceptance` 재실행 → 릴리스 판정
