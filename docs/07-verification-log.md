@@ -332,6 +332,23 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 - 웹 로그인은 `VITE_APPLE_CLIENT_ID`·Return URL 등록 후 실토큰으로 E2E 를 확인해야 한다.
   미설정 빌드는 기존 `x-user-id` 데모 인증을 유지한다.
 
+## 2.17 로컬 수용 테스트 재실행 (W-29, 2026-11-16)
+
+| # | 검증 | 결과 |
+| --- | --- | --- |
+| 1 | 계약 + 타입 + 단위/통합 (`npm run check`, 56 tests) | 통과 |
+| 2 | 웹 E2E (Playwright, 6 tests) | 통과 |
+| 3 | Swift BLE 패키지 (34 tests) | 통과 |
+| 4 | iOS 시뮬레이터 빌드 | 통과 |
+| 5 | DB 마이그레이션 제약 | SKIP (DATABASE_URL 없음) |
+| 6 | PostgreSQL 패리티 | SKIP (DATABASE_URL 없음) |
+| 7 | S3/MinIO 스토리지 | SKIP (S3_ENDPOINT 없음) |
+| 8 | 펌웨어 빌드 (ESP32-S3) | SKIP (PlatformIO 없음) |
+
+- 수용 러너가 필수 도구 부재를 FAIL 이 아니라 SKIP 으로 처리하도록 고쳤다.
+- **4 통과, 4 건너뜀, 0 실패.** 릴리스 판정은 여전히 **NO-GO** 이며, DB·S3·펌웨어를 포함한
+  8/8 재확인과 실물·실 provider·배포 인증서 차단 해소가 필요하다(`docs/15-release-checklist.md`).
+
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
 | ID | 항목 | 사유 | 검증 방법(준비됨) |

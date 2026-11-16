@@ -10,6 +10,7 @@
  *   npm run acceptance -- --with-ios
  */
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,6 +18,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const withIos = process.argv.includes("--with-ios");
 const databaseUrl = process.env.DATABASE_URL;
 const s3 = Boolean(process.env.S3_ENDPOINT);
+const pioBin = process.env.PIO_BIN ?? `${process.env.HOME}/.platformio/penv/bin/pio`;
+const hasPio = existsSync(pioBin);
+const hasXcodebuild = existsSync("/usr/bin/xcodebuild");
 
 const checks = [
   { name: "계약 + 타입 + 단위/통합", command: "npm", args: ["run", "check"], required: true },
@@ -51,10 +55,11 @@ const checks = [
   },
   {
     name: "펌웨어 빌드 (ESP32-S3)",
-    command: process.env.PIO_BIN ?? `${process.env.HOME}/.platformio/penv/bin/pio`,
+    command: pioBin,
     args: ["run"],
     cwd: path.join(ROOT, "firmware", "esp32s3"),
     required: false,
+    skip: hasPio ? null : "PlatformIO 없음",
   },
   {
     name: "iOS 시뮬레이터 빌드",
@@ -75,7 +80,7 @@ const checks = [
     ],
     cwd: path.join(ROOT, "apps", "ios"),
     required: false,
-    skip: withIos ? null : "--with-ios 미지정",
+    skip: !withIos ? "--with-ios 미지정" : hasXcodebuild ? null : "Xcode 없음",
   },
 ];
 
