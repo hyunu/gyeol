@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import samples from "./samples.json";
-import { parseWav, sha256Hex } from "./wav";
+import { parseWav } from "./wav";
+import { sha256Hex } from "./sha256";
 import * as api from "./api";
 
 type Phase =
