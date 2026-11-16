@@ -32,9 +32,21 @@ CI 는 재생성 후 diff 가 있으면 실패한다.
 
 ## 인증
 
-로컬 임시 헤더(`x-user-id`)를 쓴다(ADR-0003). 기본값은 데모 사용자이며,
-`localStorage.gyeol.userId` 로 바꿀 수 있다. 서버는 Apple 로그인 + 세션(ADR-0010)을 지원하며,
-웹 로그인 UI 는 Apple Service ID 발급 후 연결한다.
+Apple 로그인 + 서버 세션을 쓴다(ADR-0010). 서버가 `HttpOnly; SameSite=Lax` 인
+`gyeol_session` 쿠키를 발급하고, 웹은 쿠키로 API 를 호출한다. 쿠키 인증 변경 요청에는
+클라이언트가 `X-GYEOL-CSRF: 1` 헤더를 붙인다.
+
+Apple 로그인을 켜려면 빌드 시 Service ID 와 Return URL 을 설정한다.
+
+```bash
+VITE_APPLE_CLIENT_ID=com.example.gyeol.web \
+VITE_APPLE_REDIRECT_URI=https://gyeol.example.com \
+npm run build
+```
+
+`VITE_APPLE_CLIENT_ID` 가 없으면 로컬 개발용 `x-user-id` 데모 인증을 쓴다(ADR-0003).
+기본 데모 사용자이며 `localStorage.gyeol.userId` 로 바꿀 수 있다. 개발 빌드에서는
+로그인 화면의 "로컬 데모로 시작" 버튼으로 같은 데모 세션을 선택할 수 있다.
 
 ## 상태
 

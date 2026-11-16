@@ -61,7 +61,7 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 | W-16 | 웹 대시보드 골격 | W-02 | 타임라인·상세가 계약 타입으로 연동 | `DONE` |
 | W-17 | 인물별 보기·검색 UI | W-16, W-10, W-11 | 날짜·인물·키워드 검색 E2E | `DONE` |
 | W-18 | 실제 AI provider 어댑터 | W-10, W-15 | Fake 와 동일 계약 테스트, 실패 시 fail-closed | `DONE(계약)` — HTTP provider 어댑터·mock 계약 6건, 실제 vendor는 ENV-05 |
-| W-19 | 실 인증·소유자 스코프 강화 | W-12 | 임시 헤더 제거, 타 사용자 접근 차단 테스트 | `PARTIAL` — 서버 세션·JWKS·소유자 스코프·HttpOnly 쿠키 발급·CSRF 보호 완료, 웹 로그인 UI는 Service ID 대기 |
+| W-19 | 실 인증·소유자 스코프 강화 | W-12 | 임시 헤더 제거, 타 사용자 접근 차단 테스트 | `PARTIAL` — 서버 세션·JWKS·소유자 스코프·HttpOnly 쿠키·CSRF, 웹 Apple JS 로그인/로그아웃/세션 복원 UI 완료. 실 Service ID·실토큰 E2E 대기 |
 
 ### Track 4 — 하드웨어·iOS (실물 의존)
 

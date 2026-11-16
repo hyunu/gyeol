@@ -14,6 +14,20 @@ export interface Page<T> {
   hasNext: boolean;
 }
 
+export interface AuthUser {
+  id: string;
+  displayName: string;
+}
+
+export interface AuthSession {
+  token: string;
+  tokenType: string;
+  expiresAt: string;
+  user: AuthUser;
+}
+
+type AuthMode = "session" | "demo";
+
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api/v1";
 
 /**
@@ -21,12 +35,83 @@ const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api/
  * 주소창에 토큰을 남기지 않도록 localStorage 를 쓴다.
  */
 const DEMO_USER_ID = "0199aaaa-0000-7000-8000-000000000001";
+const AUTH_USER_KEY = "gyeol.authUser";
+const AUTH_MODE_KEY = "gyeol.authMode";
 
 export function currentUserId(): string {
   try {
     return localStorage.getItem("gyeol.userId") || DEMO_USER_ID;
   } catch {
     return DEMO_USER_ID;
+  }
+}
+
+export function storedAuthUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as AuthUser;
+    return value.id && value.displayName ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function currentAuthMode(): AuthMode | null {
+  try {
+    const stored = localStorage.getItem(AUTH_MODE_KEY);
+    if (stored === "session" || stored === "demo") return stored;
+  } catch {
+    // localStorage 접근 불가 → Apple 설정 유무로 판단한다.
+  }
+  return import.meta.env.VITE_APPLE_CLIENT_ID ? null : "demo";
+}
+
+function storeAuth(user: AuthUser, mode: AuthMode): void {
+  try {
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+    localStorage.setItem(AUTH_MODE_KEY, mode);
+  } catch {
+    // 저장 실패는 로그인 자체를 막지 않는다(새로고침 시 다시 로그인).
+  }
+}
+
+export function clearAuth(): void {
+  try {
+    localStorage.removeItem(AUTH_USER_KEY);
+    localStorage.removeItem(AUTH_MODE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** Apple JS 로그인 성공 후 서버 세션(쿠키)을 만든다. */
+export async function signInWithApple(
+  identityToken: string,
+  displayName?: string,
+): Promise<AuthUser> {
+  const body: Record<string, string> = { identityToken };
+  if (displayName?.trim()) body.displayName = displayName.trim();
+  const response = await request<{ session: AuthSession }>("/auth/apple", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  storeAuth(response.session.user, "session");
+  return response.session.user;
+}
+
+/** 로컬 개발용 데모 사용자. `GYEOL_ENV=local` 서버에서만 동작한다. */
+export function startLocalDemo(): AuthUser {
+  const user = { id: currentUserId(), displayName: "로컬 데모" };
+  storeAuth(user, "demo");
+  return user;
+}
+
+export async function signOut(): Promise<void> {
+  try {
+    await request<void>("/auth/logout", { method: "POST" });
+  } finally {
+    clearAuth();
   }
 }
 
@@ -49,16 +134,22 @@ interface Problem {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = (init.method ?? "GET").toUpperCase();
+  const mode = currentAuthMode();
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    ...(mode === "demo" ? { "x-user-id": currentUserId() } : {}),
+    ...(method === "GET" || method === "HEAD" ? {} : { "x-gyeol-csrf": "1" }),
+    ...(init.body === undefined ? {} : { "content-type": "application/json" }),
+    ...(init.headers as Record<string, string> | undefined),
+  };
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
       ...init,
-      headers: {
-        accept: "application/json",
-        "x-user-id": currentUserId(),
-        ...(init.body === undefined ? {} : { "content-type": "application/json" }),
-        ...init.headers,
-      },
+      credentials: "same-origin",
+      headers,
     });
   } catch {
     throw new ApiError(0, "서버에 연결하지 못했습니다.");

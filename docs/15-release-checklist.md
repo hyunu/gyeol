@@ -27,7 +27,7 @@
 | ---: | --- | --- | --- |
 | 1 | **nRF52840 Sense 실물** | ESP32-S3 개발 보드만 연결. SD/PDM 미동작(Sense 변형 아님 가능성) | Sense 보드에서 PDM·microSD·VAD 실측 (W-21) |
 | 2 | **iOS 실기기 E2E** | 시뮬레이터 빌드만. 연결된 iPhone 없음 | 실기기에서 Sign in with Apple + BLE 전송 + 서버 업로드/ACK/분석 (W-24) |
-| 3 | **Apple 실 토큰 검증** | Fake verifier 로 서버 경로만 검증 (ENV-09) | App ID/Service ID + 실제 identity token |
+| 3 | **Apple 실 토큰 검증** | Fake verifier 로 서버 경로만 검증 (ENV-09). 웹 Apple JS 로그인 UI 는 구현 | App ID/Service ID 등록 + 실제 identity token 으로 서버·웹 E2E |
 | 4 | **In-House 배포 인증서** | Apple Distribution 인증서 없음 | 팀 관리자가 인증서 발급·설치 |
 | 5 | **실제 AI provider** | HTTP 계약·mock 테스트만 (ENV-05) | provider 선정·키·비용/데이터 정책, 실측 |
 | 6 | **10k 규모 성능** | 120건 기준선만 | 10,000건·TLS·프록시·다중 인스턴스 측정 |

@@ -8,6 +8,7 @@ interface SidebarProps {
   activePersonId: string | null;
   onPersonChange(personId: string | null): void;
   onRetryPeople(): void;
+  signedIn: boolean;
 }
 
 function SearchIcon() {
@@ -36,6 +37,7 @@ export function Sidebar({
   activePersonId,
   onPersonChange,
   onRetryPeople,
+  signedIn,
 }: SidebarProps) {
   return (
     <aside className="sidebar" aria-label="찾아보기">
@@ -121,8 +123,9 @@ export function Sidebar({
       </section>
 
       <p className="sidebar__note">
-        로컬 임시 인증으로 연결되어 있습니다. 서버 세션 인증은 준비됐고, 웹 로그인은 Apple
-        Service ID 발급 후 연결합니다.
+        {signedIn
+          ? "Apple 로그인 세션으로 연결되어 있습니다. 기록은 이 계정에만 속합니다."
+          : "로컬 임시 인증으로 연결되어 있습니다. 웹 로그인은 Apple Service ID 설정 후 사용할 수 있습니다."}
       </p>
     </aside>
   );

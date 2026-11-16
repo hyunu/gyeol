@@ -326,8 +326,11 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 | 5 | 로그아웃이 세션을 폐기하고 `Max-Age=0` 쿠키로 브라우저 세션도 삭제 | 동일 | 통과 |
 | 6 | 계약(OpenAPI)에 Set-Cookie·403 응답·CSRF 설명 반영 | `npm run validate` | 통과 |
 | 7 | 전체 TS 검증 | `npm run check` (**56 tests**) | 통과 |
+| 8 | 웹 Apple JS 로그인/로그아웃 UI, 데모 폴백, 401 세션 만료 처리 | `apps/web` 빌드 | 통과 |
+| 9 | 웹 빌드(`VITE_APPLE_CLIENT_ID` 유무 모두) | `npm --prefix apps/web run build` | 통과 |
 
-- 웹 로그인 UI 는 Apple Service ID 발급 전까지 붙이지 않는다. 서버 계약은 준비됐다.
+- 웹 로그인은 `VITE_APPLE_CLIENT_ID`·Return URL 등록 후 실토큰으로 E2E 를 확인해야 한다.
+  미설정 빌드는 기존 `x-user-id` 데모 인증을 유지한다.
 
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 
