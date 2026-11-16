@@ -92,11 +92,13 @@ export async function ack(recordingId: string): Promise<{ recording: Recording }
 }
 
 export async function analyze(recordingId: string): Promise<AnalysisJob> {
-  return request(`/api/v1/recordings/${recordingId}/analyze`, { method: "POST" });
+  const res = await request<{ job: AnalysisJob }>(`/api/v1/recordings/${recordingId}/analyze`, { method: "POST" });
+  return res.job;
 }
 
 export async function getJob(jobId: string): Promise<AnalysisJob> {
-  return request(`/api/v1/analysis-jobs/${jobId}`);
+  const res = await request<{ job: AnalysisJob }>(`/api/v1/analysis-jobs/${jobId}`);
+  return res.job;
 }
 
 export async function getConversation(id: string): Promise<ConversationDetail> {
