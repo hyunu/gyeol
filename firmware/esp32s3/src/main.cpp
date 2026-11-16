@@ -587,9 +587,10 @@ class ServerCallbacks : public BLEServerCallbacks {
 
 class RxCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *characteristic) override {
-    const std::string value = characteristic->getValue();
-    if (value.empty() || rxQueue == nullptr) return;
-    auto *item = new std::vector<uint8_t>(value.begin(), value.end());
+    String raw = characteristic->getValue();
+    if (raw.length() == 0 || rxQueue == nullptr) return;
+    auto *item = new std::vector<uint8_t>(raw.length());
+    memcpy(item->data(), raw.c_str(), raw.length());
     if (xQueueSend(rxQueue, &item, 0) != pdTRUE) {
       Serial.println("[ble] rx queue full");
       delete item;
