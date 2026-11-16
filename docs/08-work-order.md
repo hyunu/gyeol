@@ -69,7 +69,7 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 | --- | --- | --- | --- | --- |
 | W-20 | BLE GATT 프로토콜 계약 | W-09 | 프레임·ACK·재전송·이어받기 명세 + 시뮬레이터 테스트 | `DONE` |
 | W-21 | 펌웨어 PDM·VAD·microSD | W-20 | 오프라인 누적·전원 차단 복구 시나리오 | `PARTIAL(ESP32-S3)` — PDM·VAD·LittleFS 회전·BLE 전송 검증. microSD는 슬롯 미응답, 음성 튜닝 필요 |
-| W-22 | 펌웨어 BLE 전송 | W-21 | 중단/재개 무손실·해시 일치 | `DONE(ESP32-S3)` — 160,300 bytes SHA 일치, 중단·재부팅 후 재개. nRF52840은 대기 |
+| W-22 | 펌웨어 BLE 전송 | W-21 | 중단/재개 무손실·해시 일치 | `DONE(ESP32-S3)` — 160,300 bytes SHA 일치, 중단·재부팅 후 재개. BLE RX 콜백 빌드 오류 수정으로 현재 툴체인(PlatformIO 6.2.0) 빌드 통과. nRF52840은 대기 |
 | W-23 | iOS CoreBluetooth 수신 | W-20 | Fake 기기로 수신·재개 검증 | `PARTIAL(빌드)` — Swift 32 tests·시뮬레이터 실행·device 빌드·주소 설정. 실기기 E2E 대기 |
 | W-24 | iOS 분석 실행·서버 업로드 | W-23, W-18 | 전 구간 E2E + 실측 기록 | `PARTIAL(구현)` — 기기 등록→녹음 생성→청크 PUT→`/ack`→`/analyze` 상태 머신·WAV 메타데이터 파생·재시작 복구·`/analysis-jobs` 폴링·분석 성공/실패 반영·`conversationId` 대화 이동. Swift 34 tests·`npm run check` 55·시뮬레이터 빌드 통과, 실기기 E2E 대기 |
 
@@ -81,7 +81,7 @@ Track 1 완료 후 Track 4 (하드웨어·iOS) 병렬 착수 가능
 | W-26 | 백업/복구 절차·리허설 | W-09 | 복구 리허설 기록 | `DONE` |
 | W-27 | 관측성(로그·메트릭·traceId) | W-15 | 대시보드·알림 최소 세트 | `DONE` |
 | W-28 | 부하/지연 목표 측정 | W-15, W-18 | 목표 대비 측정표 | `PARTIAL` — 120/10k 측정, 검색 p95 175ms 달성. 실제 provider 대기 |
-| W-29 | 릴리스 체크리스트·수용 테스트 | W-01~W-28 | 스펙 MVP 수용 기준 전체 통과 | `BLOCKED` — 로컬 8/8(2026-11-14)·재실행 4/4+SKIP 4(2026-11-16), `docs/15-release-checklist.md` 차단 10건 |
+| W-29 | 릴리스 체크리스트·수용 테스트 | W-01~W-28 | 스펙 MVP 수용 기준 전체 통과 | `BLOCKED` — 로컬 8/8 통과(2026-11-14, 2026-11-16 로컬 PostgreSQL·MinIO·PlatformIO 포함 재실행). 릴리스는 실물·실 provider·배포 자격 증명 차단으로 **NO-GO** (`docs/15-release-checklist.md`) |
 
 ## 4. 지금 위치
 

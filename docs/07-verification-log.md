@@ -346,8 +346,31 @@ nRF52840 Sense 는 아니므로 `HW-PENDING` 은 유지한다.
 | 8 | 펌웨어 빌드 (ESP32-S3) | SKIP (PlatformIO 없음) |
 
 - 수용 러너가 필수 도구 부재를 FAIL 이 아니라 SKIP 으로 처리하도록 고쳤다.
-- **4 통과, 4 건너뜀, 0 실패.** 릴리스 판정은 여전히 **NO-GO** 이며, DB·S3·펌웨어를 포함한
-  8/8 재확인과 실물·실 provider·배포 인증서 차단 해소가 필요하다(`docs/15-release-checklist.md`).
+- 초기 재실행은 **4 통과, 4 건너뜀, 0 실패.** 이후 로컬 도구를 갖추고 8/8 재확인했다(2.18).
+
+## 2.18 로컬 수용 테스트 8/8 통과 (W-29, 2026-11-16)
+
+Homebrew 로 PostgreSQL 17(+pgvector)·MinIO·PlatformIO 를 설치하고, 로컬 서비스에서
+수용 테스트를 다시 실행했다.
+
+| # | 검증 | 근거/환경 | 결과 |
+| --- | --- | --- | --- |
+| 1 | 계약 + 타입 + 단위/통합 (56 tests) | `npm run check` | 통과 |
+| 2 | DB 마이그레이션 제약 (5 files) | PostgreSQL 17, `127.0.0.1:5432/gyeol` | 통과 |
+| 3 | PostgreSQL 패리티 (20 tests) | 동일 | 통과 |
+| 4 | S3/MinIO 스토리지 (7 tests) | MinIO `127.0.0.1:9000` (minioadmin) | 통과 |
+| 5 | 웹 E2E (6 tests) | Playwright | 통과 |
+| 6 | Swift BLE 패키지 (34 tests) | `swift test` | 통과 |
+| 7 | 펌웨어 빌드 (ESP32-S3) | PlatformIO 6.2.0, `seeed_xiao_esp32s3` | 통과 |
+| 8 | iOS 시뮬레이터 빌드 | `xcodebuild ... iphonesimulator` | 통과 |
+
+- **8 통과, 0 건너뜀, 0 실패** (`npm run acceptance -- --with-ios`).
+- 수용 러너가 `PIO_BIN`/기본 경로 외에 `/opt/homebrew/bin/pio`, PATH 의 `pio|platformio` 도
+  자동 탐지하도록 보완했다.
+- 펌웨어: `firmware/esp32s3/src/main.cpp` BLE RX 콜백에서 `getValue()` 반환값을
+  `String`으로 받아 길이 기반 복사하도록 수정해 빌드 오류를 해소했다.
+- Docker 대신 로컬(Homebrew) 서비스 사용. 릴리스 판정은 여전히 **NO-GO** 이며 실물·실
+  provider·배포 자격 증명 차단은 `docs/15-release-checklist.md` 를 따른다.
 
 ## 3. ENV-PENDING (완료로 표시하지 않음)
 

@@ -9,7 +9,7 @@
  *   DATABASE_URL=postgres://gyeol:gyeol@localhost:5433/gyeol npm run acceptance
  *   npm run acceptance -- --with-ios
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,7 +18,26 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const withIos = process.argv.includes("--with-ios");
 const databaseUrl = process.env.DATABASE_URL;
 const s3 = Boolean(process.env.S3_ENDPOINT);
-const pioBin = process.env.PIO_BIN ?? `${process.env.HOME}/.platformio/penv/bin/pio`;
+
+function findPio() {
+  if (process.env.PIO_BIN) return process.env.PIO_BIN;
+  const candidates = [
+    `${process.env.HOME}/.platformio/penv/bin/pio`,
+    "/opt/homebrew/bin/pio",
+    "/usr/local/bin/pio",
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  for (const name of ["pio", "platformio"]) {
+    const probe = spawnSync("which", [name], { encoding: "utf8" });
+    const found = probe.status === 0 ? probe.stdout.trim().split("\n")[0] : "";
+    if (found && existsSync(found)) return found;
+  }
+  return `${process.env.HOME}/.platformio/penv/bin/pio`;
+}
+
+const pioBin = findPio();
 const hasPio = existsSync(pioBin);
 const hasXcodebuild = existsSync("/usr/bin/xcodebuild");
 

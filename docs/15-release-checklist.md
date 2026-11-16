@@ -19,26 +19,34 @@
 
 - **8/8 통과**, 오류 0. 실행 로그는 CI/로컬에서 재현한다.
 
-### 2026-11-16 재실행
+### 2026-11-16 재실행 (로컬 DB·S3·펌웨어 포함)
 
-현재 코드 기준으로 `npm run acceptance -- --with-ios` 를 다시 돌렸다. 이 환경에는 Docker 와
-PlatformIO 가 없어 DB·S3·펌웨어 항목은 SKIP 이다.
+Homebrew 로 PostgreSQL 17(+pgvector)·MinIO·PlatformIO 를 설치하고, 로컬 서비스
+(PostgreSQL `127.0.0.1:5432/gyeol`, MinIO `127.0.0.1:9000`)에 대해
+`npm run acceptance -- --with-ios` 를 다시 실행했다.
 
 | 검증 | 결과 | 시간 |
 | --- | --- | ---: |
 | 계약 + 타입 + 단위/통합 (56 tests) | PASS | 2.7s |
-| 웹 E2E (6 tests) | PASS | 5.4s |
-| Swift BLE 패키지 (34 tests) | PASS | 2.9s |
-| iOS 시뮬레이터 빌드 | PASS | 12.6s |
-| DB 마이그레이션 제약 | SKIP (DATABASE_URL 없음) | — |
-| PostgreSQL 패리티 | SKIP (DATABASE_URL 없음) | — |
-| S3/MinIO 스토리지 | SKIP (S3_ENDPOINT 없음) | — |
-| 펌웨어 빌드 (ESP32-S3) | SKIP (PlatformIO 없음) | — |
+| DB 마이그레이션 제약 (5 files) | PASS | 0.3s |
+| PostgreSQL 패리티 (20 tests) | PASS | 1.8s |
+| S3/MinIO 스토리지 (7 tests) | PASS | 1.0s |
+| 웹 E2E (6 tests) | PASS | 5.3s |
+| Swift BLE 패키지 (34 tests) | PASS | 1.9s |
+| 펌웨어 빌드 (ESP32-S3) | PASS | 1.2s |
+| iOS 시뮬레이터 빌드 | PASS | 1.8s |
 
-- **4 통과, 4 건너뜀, 0 실패.** 수용 러너는 이제 필수 도구 부재를 FAIL 이 아니라 SKIP 으로
-  표시한다. DB·S3·펌웨어 포함 8/8 판정은 해당 도구가 있는 환경에서 다시 확인해야 한다.
-- 테스트 수는 2026-11-16 기준 TS **56** · Swift **34** 으로 갱신됐다.
-- 성능 기준선: 목록 p95 14.9ms, 상세 16.8ms, 검색 19.7ms (120건·동시성 20).
+- **8 통과, 0 건너뜀, 0 실패.**
+- 수용 러너는 PlatformIO 를 `~/.platformio/penv/bin/pio`, `/opt/homebrew/bin/pio`,
+  `/usr/local/bin/pio`, PATH 순으로 자동 탐지한다(또는 `PIO_BIN`).
+- ESP32-S3 펌웨어의 BLE RX 콜백 컴파일 오류(`String`→`std::string` 직접 변환)를 수정해
+  현재 코드 기준 펌웨어 빌드가 통과한다.
+- Docker 대신 로컬(Homebrew) PostgreSQL/MinIO 를 사용한 결과이므로, CI/Docker 환경에서도
+  동일하게 재현되는지 별도 확인이 필요하다.
+- 릴리스 판정은 여전히 **NO-GO** 다. 로컬 소프트웨어 수용은 통과했지만 실물·실 provider·
+  배포 자격 증명 등 차단 목록(§2)은 남아 있다.
+- 테스트 수는 2026-11-16 기준 TS **56** · Swift **34**. 성능 기준선(120건): 목록 p95 14.9ms,
+  상세 16.8ms, 검색 19.7ms.
 
 ## 2. 릴리스 차단 목록 (NO-GO 사유)
 
@@ -57,7 +65,7 @@ PlatformIO 가 없어 DB·S3·펌웨어 항목은 SKIP 이다.
 
 ## 3. 배포 전 필수 확인
 
-- [ ] `make acceptance` 8/8 통과
+- [x] `make acceptance` 8/8 통과 (2026-11-16, 로컬 PostgreSQL·MinIO·PlatformIO) — CI/Docker 재현 확인 권장
 - [ ] 마이그레이션 `0001~0004` 빈 DB 적용 + `db:checks`
 - [ ] 백업/복구 리허설 (`docs/11-backup-restore.md`) 최신 백업으로 재실행
 - [ ] `npm run purge` 가 기대 건수만 삭제하는지 확인
