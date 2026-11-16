@@ -74,5 +74,14 @@ test-s3: ## S3(MinIO) 스토리지 테스트
 	S3_BUCKET=$${S3_BUCKET:-gyeol-test} \
 	npm run --silent test:s3
 
+acceptance-docker: ## 수용 테스트 (docker compose 기본값: postgres 5433, minio 9000)
+	DATABASE_URL=$${DATABASE_URL:-postgres://gyeol:gyeol@127.0.0.1:5433/gyeol} \
+	S3_ENDPOINT=$${S3_ENDPOINT:-http://127.0.0.1:9000} \
+	S3_REGION=$${S3_REGION:-us-east-1} \
+	S3_ACCESS_KEY_ID=$${S3_ACCESS_KEY_ID:-gyeol} \
+	S3_SECRET_ACCESS_KEY=$${S3_SECRET_ACCESS_KEY:-gyeol-minio} \
+	S3_FORCE_PATH_STYLE=$${S3_FORCE_PATH_STYLE:-true} \
+	npm run --silent acceptance -- --with-ios
+
 clean: ## 로컬 산출물 정리
 	rm -rf node_modules .artifacts

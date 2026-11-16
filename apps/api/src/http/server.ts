@@ -174,6 +174,16 @@ export function createApp(options: AppOptions = {}): http.Server {
       detail: "실물 하드웨어 미연결 (HW-PENDING)",
     });
 
+    checks.push(
+      deps.identity
+        ? { name: "apple-auth", status: "ok", detail: "APPLE_CLIENT_IDS 구성됨" }
+        : {
+            name: "apple-auth",
+            status: "skipped",
+            detail: "APPLE_CLIENT_IDS 미설정 — /auth/apple 은 503 (로컬 X-User-Id 사용 가능)",
+          },
+    );
+
     const status = checks.some((c) => c.status === "down")
       ? "down"
       : checks.some((c) => c.status === "degraded")
